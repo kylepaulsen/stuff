@@ -1,0 +1,456 @@
+<!DOCTYPE html>
+<html>
+<head>
+<title>Julia Set Generator</title>
+</head>
+
+<body>
+    <h1>Julia Set Generator</h1>
+    <h3>Works best in Google Chrome.</h3>
+    <b>Instructions:</b><br/>
+    <ul>
+    <li>Modify any of the numbers and click generate</li>
+    <li>Keep all numbers lowish, or you will have to wait a LONG time.</li>
+    <li>Click and Drag anywhere in the canvas to specify a new window area and it will automatically zoom to it.</li>
+    <li>Click in one spot to define a new center point for the canvas to move to.</li>
+    <li>Ctrl+Click in one spot to define a new initial complex point that will render something like in the preview.</li>
+    </ul>
+    <div style="float: left;">
+    <table>
+        <tr><td>
+        Canvas Width:
+        </td><td>
+        <input type="text" id="cwid" value="800" />
+        </td><td>
+        Xmin:
+        </td><td>
+        <input type="text" id="xmin" value="-2.0" />
+        </td></tr>
+        <tr><td>
+        Canvas Height:
+        </td><td>
+        <input type="text" id="chei" value="600" />
+        </td><td>
+        Xmax:
+        </td><td>
+        <input type="text" id="xmax" value="2.0" />
+        </td></tr>
+        <tr><td>
+        Iterations:
+        </td><td>
+        <input type="text" id="iter" value="50" />
+        </td><td>
+        Ymin:
+        </td><td>
+        <input type="text" id="ymin" value="-1.5" />
+        </td></tr>
+        <tr><td>
+        Cut Off Dist:
+        </td><td>
+        <input type="text" id="dist" value="4.0" />
+        </td><td>
+        Ymax:
+        </td><td>
+        <input type="text" id="ymax" value="1.5" />
+        </td></tr>
+        <tr><td>
+        Initial Z:
+        </td><td>
+        <input type="text" id="zx" value="0.0" />
+        </td><td>
+        +
+        </td><td>
+        <input type="text" id="zy" value="-1.0" />i
+        </td></tr>
+    </table>
+    </div>
+    <div style="float: left; margin-left: 30px;">
+        Canvas Preview:<br/>
+        <canvas id="canvasPre" width="100" height="75" style="border: 1px solid #000000;"></canvas>
+    </div>
+    <div style="clear: both;">
+    <input type="button" id="genBtn" value="Generate" />
+    <input type="button" id="resetBtn" value="Reset Graph Defaults" />
+    <input type="button" id="resetZBtn" value="Reset Z" />
+    <input type="button" id="saveImageBtn" value="Save Image" />
+    <span id="loading"></span><br/>
+
+    Colors: <input type="checkbox" id="colors" value="1" checked="checked" />
+    Show Z on Graph: <input type="checkbox" id="showZ" value="1" />
+    Show Axis:  <input type="checkbox" id="showAxis" value="1" />
+    Show Preview: <input type="checkbox" id="showGuide" value="1" checked="checked" />
+    <br/><br/>
+    <div id="canvasDiv">
+        <canvas id="canvas"></canvas>
+    </div>
+    <div id="initz"></div>
+    <span>If there is an image below here, right click on it to save it.</span>
+    <div id="imageDiv"></div>
+    <a name="ss"></a>
+    </div>
+    <script type="text/javascript">
+        'use strict';
+
+        // My version of jquery:
+        var $$ = document.querySelectorAll.bind(document);
+        NodeList.prototype.forEach = Array.prototype.forEach;
+
+        var ui = {};
+        $$('*[id]').forEach(function(el) {
+            ui[el.id] = el;
+        });
+
+        var canvas = ui.canvas;
+        var canvas2 = ui.canvasPre;
+        var ctx = canvas.getContext('2d');
+        var ctx2 = canvas2.getContext('2d');
+
+        var canvasRect = canvas.getBoundingClientRect();
+        var mousePt;
+
+        var width;
+        var height;
+        var xmin;
+        var xmax;
+        var ymin;
+        var ymax;
+        var iterations;
+        var cutOffDist;
+        var cutOffDistSquared;
+        var colors;
+
+        var initX;
+        var initY;
+
+        var xaxis;
+        var yaxis;
+        var renderStartTime;
+
+        var ctrlDown = false;
+
+        function hue2rgb(p, q, t) {
+            if (t < 0) {
+                t += 1;
+            }
+            if (t > 1) {
+                t -= 1;
+            }
+            if (t < 1 / 6) {
+                return p + (q - p) * 6 * t;
+            }
+            if (t < 1 / 2) {
+                return q;
+            }
+            if (t < 2 / 3) {
+                return p + (q - p) * (2 / 3 - t) * 6;
+            }
+            return p;
+        }
+        /**
+         * Converts an HSL color value to RGB. Conversion formula
+         * adapted from http://en.wikipedia.org/wiki/HSL_color_space.
+         * Assumes h, s, and l are contained in the set [0, 1] and
+         * returns r, g, and b in the set [0, 255].
+         *
+         * @param   Number  h       The hue
+         * @param   Number  s       The saturation
+         * @param   Number  l       The lightness
+         * @return  Array           The RGB representation
+         */
+        function hslToRgb(h, s, l) {
+            var r, g, b;
+            h = h % 1;
+            if (s === 0) {
+                r = g = b = l; // achromatic
+            } else {
+                var q = l < 0.5 ? l * (1 + s) : l + s - l * s;
+                var p = 2 * l - q;
+                r = hue2rgb(p, q, h + 1 / 3);
+                g = hue2rgb(p, q, h);
+                b = hue2rgb(p, q, h - 1 / 3);
+            }
+
+            return [~~(r * 255), ~~(g * 255), ~~(b * 255)];
+        }
+
+        function toDraw(pickNewPoint) {
+            if (pickNewPoint) {
+                initX = parseFloat(ui.zx.value);
+                initY = parseFloat(ui.zy.value);
+                ui.initz.innerHTML = 'This set used the complex number ' + initX + ' + ' + initY + 'i';
+            }
+            ui.loading.innerHTML = 'Loading...';
+            renderStartTime = Date.now();
+            setTimeout(draw, 10);
+        }
+
+        function draw() {
+            width = parseInt(ui.cwid.value);
+            height = parseInt(ui.chei.value);
+            xmin = parseFloat(ui.xmin.value);
+            xmax = parseFloat(ui.xmax.value);
+            ymin = parseFloat(ui.ymin.value);
+            ymax = parseFloat(ui.ymax.value);
+            iterations = parseInt(ui.iter.value);
+            cutOffDist = parseFloat(ui.dist.value);
+            cutOffDistSquared = cutOffDist * cutOffDist;
+            colors = document.getElementById('colors').checked;
+
+            xaxis = xmax - xmin;
+            yaxis = ymax - ymin;
+
+            clearCanvas();
+
+            var image = ctx.createImageData(canvas.width, canvas.height);
+            var imageData = image.data;
+            var t = 0;
+
+            for (var y = 0; y < height; ++y) {
+                for (var x = 0; x < width; ++x) {
+
+                    var x0 = x * xaxis / width + xmin;
+                    var y0 = ymax - y * yaxis / height;
+
+                    var x1 = x0;
+                    var y1 = y0;
+                    var z = 0;
+
+                    while ((x1 * x1 + y1 * y1) <= cutOffDistSquared && z < iterations) {
+                        var xtemp = x1 * x1 * x1 - 3 * x1 * y1 * y1 + initX;
+                        y1 = 3 * x1 * x1 * y1 - y1 * y1 * y1 + initY;
+                        x1 = xtemp;
+
+                        ++z;
+                    }
+
+                    if (z === iterations) {
+                        imageData[t] = 0;
+                        imageData[t + 1] = 0;
+                        imageData[t + 2] = 0;
+                        imageData[t + 3] = 255;
+                    } else if (colors) {
+                        //crazy stuff...
+                        var h = ((50 * Math.log(Math.abs(z / (x0 * y0)))) / 360);
+                        //var h = (Math.floor(x1 * 100)^Math.floor(y1 * 100)) / 1000;
+                        var rgb = hslToRgb(h, 1, 0.5);
+                        imageData[t] = rgb[0];
+                        imageData[t + 1] = rgb[1];
+                        imageData[t + 2] = rgb[2];
+                        imageData[t + 3] = 255;
+                    }
+
+                    t += 4;
+                }
+            }
+
+            ctx.putImageData(image, 0, 0);
+
+            var showZ = ui.showZ.checked;
+            var showA = ui.showAxis.checked;
+
+            if (showZ) {
+                ctx.fillStyle = 'red';
+                ctx.fillRect(((initX - xmin) * width / xaxis) - 1, ((initY - ymax) * -height / yaxis) - 1, 3, 3);
+            }
+            if (showA) {
+                ctx.fillStyle = 'red';
+                ctx.fillRect(((0 - xmin) * width / xaxis), 0, 1, height);
+                ctx.fillRect(0, ((0 - ymax) * -height / yaxis), width, 1);
+            }
+
+            ui.loading.innerHTML = 'Render Time: ' + ((Date.now() - renderStartTime) / 1000.0) + ' seconds';
+        }
+
+        function clearCanvas() {
+            var newWidth = ui.cwid.value;
+            var newHeight = ui.chei.value;
+            canvas.width = newWidth;
+            canvas.height = newHeight;
+            ctx.fillStyle = '#ffffff';
+            ctx.fillRect(0, 0, newWidth, newHeight);
+        }
+
+        function mouseDown(e) {
+            if (event.which === 3) {
+                return false;
+            }
+
+            var x = e.pageX - canvasRect.left;
+            var y = e.pageY - canvasRect.top;
+            mousePt = {x: x, y: y};
+        }
+
+        function mouseMove(e) {
+            previewCanvas(e);
+        }
+
+        function mouseUp(e) {
+            if (event.which === 3) {
+                return false;
+            }
+            var x = e.pageX - canvasRect.left;
+            var y = e.pageY - canvasRect.top;
+
+            var pt1x = mousePt.x * xaxis / width + xmin;
+            var pt1y = ymax - mousePt.y * yaxis / height;
+            var pt2x = x * xaxis / width + xmin;
+            var pt2y = ymax - y * yaxis / height;
+
+            var xminObj = ui.xmin;
+            var xmaxObj = ui.xmax;
+            var yminObj = ui.ymin;
+            var ymaxObj = ui.ymax;
+            var initZx = ui.zx;
+            var initZy = ui.zy;
+
+            if (mousePt.x === x && mousePt.y === y) {
+                //mouse was clicked but not dragged.
+                if (ctrlDown) {
+                    initZx.value = pt1x;
+                    initZy.value = pt1y;
+                } else {
+                    var midPtx = (xmax + xmin) / 2;
+                    var midPty = (ymax + ymin) / 2;
+                    var xptDif = pt1x - midPtx;
+                    var yptDif = pt1y - midPty;
+
+                    xminObj.value = parseFloat(xminObj.value) + xptDif;
+                    xmaxObj.value = parseFloat(xmaxObj.value) + xptDif;
+                    yminObj.value = parseFloat(yminObj.value) + yptDif;
+                    ymaxObj.value = parseFloat(ymaxObj.value) + yptDif;
+                }
+            } else {
+                //determine how mouse was dragged...
+                if (mousePt.x < x && mousePt.y < y) {
+                    //first pt is north west of second.
+                    xminObj.value = pt1x;
+                    xmaxObj.value = pt2x;
+                    yminObj.value = pt2y;
+                    ymaxObj.value = pt1y;
+                } else if (mousePt.x < x && mousePt.y > y) {
+                    //first pt is south west of second.
+                    xminObj.value = pt1x;
+                    xmaxObj.value = pt2x;
+                    yminObj.value = pt1y;
+                    ymaxObj.value = pt2y;
+                } else if (mousePt.x > x && mousePt.y < y) {
+                    //first pt is north east of second.
+                    xminObj.value = pt2x;
+                    xmaxObj.value = pt1x;
+                    yminObj.value = pt2y;
+                    ymaxObj.value = pt1y;
+                } else {
+                    //first pt is south east of second.
+                    xminObj.value = pt2x;
+                    xmaxObj.value = pt1x;
+                    yminObj.value = pt1y;
+                    ymaxObj.value = pt2y;
+                }
+            }
+
+            clearCanvas();
+            toDraw(ctrlDown);
+        }
+
+        function previewCanvas(e) {
+            if (ui.showGuide.checked) {
+                var widthP = 100;
+                var heightP = 75;
+                var itersP = Math.min(parseInt(ui.iter.value), 1000);
+
+                ctx2.clearRect(0, 0, widthP, heightP);
+
+                var image = ctx2.createImageData(widthP, heightP);
+                var imageData = image.data;
+                var t = 0;
+
+                var ptx = (e.pageX - canvasRect.left) * xaxis / width + xmin;
+                var pty = ymax - (e.pageY - canvasRect.top) * yaxis / height;
+
+                for (var y = 0; y < heightP; ++y) {
+                    for (var x = 0; x < widthP; ++x) {
+                        var x1 = x * xaxis / widthP + xmin;
+                        var y1 = ymax - y * yaxis / heightP;
+                        var z = 0;
+
+                        while ((x1 * x1 + y1 * y1) <= cutOffDistSquared && z < itersP) {
+                            var xtemp = x1 * x1 * x1 - 3 * x1 * y1 * y1 + ptx;
+                            y1 = 3 * x1 * x1 * y1 - y1 * y1 * y1 + pty;
+                            x1 = xtemp;
+                            ++z;
+                        }
+
+                        if (z === itersP) {
+                            imageData[t] = 0;
+                            imageData[t + 1] = 0;
+                            imageData[t + 2] = 0;
+                            imageData[t + 3] = 255;
+                        }
+
+                        t += 4;
+                    }
+                }
+
+                ctx2.putImageData(image, 0, 0);
+            }
+        }
+
+        function resetDefaults() {
+            ui.cwid.value = '800';
+            ui.chei.value = '600';
+            ui.xmin.value = '-2.0';
+            ui.xmax.value = '2.0';
+            ui.ymin.value = '-1.5';
+            ui.ymax.value = '1.5';
+            ui.iter.value = '50';
+            ui.dist.value = '4.0';
+            ui.colors.checked = true;
+        }
+
+        function resetZ() {
+            ui.zx.value = '0.0';
+            ui.zy.value = '-1.0';
+        }
+
+        function saveImage() {
+            var data = canvas.toDataURL('image/png');
+            var img = document.createElement('img');
+            img.src = data;
+
+            var output = document.getElementById('imageDiv');
+            while (output.hasChildNodes()) {
+                output.removeChild(output.firstChild);
+            }
+            output.appendChild(img);
+            window.location.hash = 'ss';
+        }
+
+        window.addEventListener('keydown', function(e) {
+            var key = e.which;
+            if (key === 17) {
+                ctrlDown = true;
+            }
+        });
+
+        window.addEventListener('keyup', function(e) {
+            var key = e.which;
+            if (key === 17) {
+                ctrlDown = false;
+            }
+        });
+
+        canvas.addEventListener('mousedown', mouseDown);
+        canvas.addEventListener('mouseup', mouseUp);
+        canvas.addEventListener('mousemove', mouseMove);
+
+        ui.genBtn.addEventListener('click', function() {
+            toDraw(true);
+        });
+        ui.resetBtn.addEventListener('click', resetDefaults);
+        ui.resetZBtn.addEventListener('click', resetZ);
+        ui.saveImageBtn.addEventListener('click', saveImage);
+
+        toDraw(true);
+    </script>
+</body>
+</html>

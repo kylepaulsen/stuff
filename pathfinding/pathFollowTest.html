@@ -1,0 +1,129 @@
+<!DOCTYPE html>
+<html lang="en">
+    <head>
+        <meta charset="UTF-8">
+        <title>Path Following</title>
+        <style>
+        #mainCanvas {
+            border: 1px solid #000000;
+        }
+        #playerCanvas {
+            position: absolute;
+            top: 1px;
+            left: 1px;
+        }
+        #canvasContainer {
+            position: relative;
+        }
+        </style>
+    </head>
+    <body>
+        <button id="goBtn">GO</button><br>
+        <div id="canvasContainer">
+            <canvas id="mainCanvas"></canvas>
+            <canvas id="playerCanvas"></canvas>
+        </div>
+        <script src="quadTree.js"></script>
+        <script src="pather.js"></script>
+        <script>
+            var gid = document.getElementById.bind(document);
+            var width = 800;
+            var height = 600;
+            var drawMode = true;
+            var pathPoints = [];
+            var path;
+            var pathSpeed;
+            var currentP = 0;
+
+            var mainCanvas = gid("mainCanvas");
+            mainCanvas.width = width;
+            mainCanvas.height = height;
+            var mctx = mainCanvas.getContext("2d");
+            mctx.lineWidth = 1;
+            mctx.strokeStyle = '#ff0000';
+
+            var playerCanvas = gid("playerCanvas");
+            playerCanvas.width = width;
+            playerCanvas.height = height;
+            var pctx = playerCanvas.getContext("2d");
+            pctx.fillStyle = "#0000ff";
+
+            var canvasContainer = gid("canvasContainer");
+            var canvasOffsetX = canvasContainer.offsetLeft;
+            var canvasOffsetY = canvasContainer.offsetTop;
+
+            var lastX;
+            var lastY;
+
+            var playerSize = 5;
+            var playerWidth = playerSize * 2;
+            var playerX = width >> 1;
+            var playerY = height >> 1;
+            var isPlayerMoving = false;
+            var playerSpeed = 2;
+
+            var drawBtn = gid("drawBtn");
+            var goBtn = gid("goBtn");
+
+            var mouseDown = false;
+
+            window.addEventListener("mousedown", function(e) {
+                if (drawMode & e.target === playerCanvas) {
+                    mouseDown = true;
+                    var x = e.pageX - canvasOffsetX;
+                    var y = e.pageY - canvasOffsetY;
+
+                    lastX = x;
+                    lastY = y;
+                }
+            });
+
+            window.addEventListener("mouseup", function(e) {
+                mouseDown = false;
+            });
+
+            window.addEventListener("mousemove", function(e) {
+                if (drawMode) {
+                    if (mouseDown) {
+                        var x = e.pageX - canvasOffsetX;
+                        var y = e.pageY - canvasOffsetY;
+                        mctx.beginPath();
+                        mctx.moveTo(lastX, lastY);
+                        mctx.lineTo(x, y);
+                        mctx.stroke();
+                        pathPoints.push({x: x, y: y});
+                        lastX = x;
+                        lastY = y;
+                    }
+                }
+            });
+
+            goBtn.addEventListener("click", function() {
+                drawMode = false;
+                isPlayerMoving = true;
+                currentP = 0;
+                path = pather(pathPoints);
+                pathSpeed = 1 / (path.getTotalDistance() / playerSpeed);
+            });
+
+            function animate(timestamp) {
+                window.requestAnimationFrame(animate);
+
+                if (isPlayerMoving) {
+                    pctx.clearRect(0, 0, width, height);
+
+                    var newPos = path.getPositionFromP(currentP);
+                    currentP += pathSpeed;
+                    playerX = newPos.x;
+                    playerY = newPos.y;
+                    pctx.fillRect(playerX - playerSize, playerY - playerSize, playerWidth, playerWidth);
+
+                    if (currentP > 1) {
+                        isPlayerMoving = false;
+                    }
+                }
+            }
+            window.requestAnimationFrame(animate);
+        </script>
+    </body>
+</html>

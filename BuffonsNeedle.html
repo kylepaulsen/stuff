@@ -1,0 +1,91 @@
+<html>
+<head>
+<title>Buffon's Needle - Discover PI</title>
+</head>
+<body style="margin: 0; padding: 0; overflow: hidden;">
+<div style="position: absolute; top: 0; font-weight: bold; z-index: 50">2 * Number of Tosses / Number of Crosses = <span id="pi"></span></div>
+<script>
+(function(){
+    "use strict";
+
+    var canvas = document.createElement("canvas");
+    canvas.width = window.innerWidth;
+    canvas.height = window.innerHeight;
+    document.body.appendChild(canvas);
+
+    var ctx = canvas.getContext("2d");
+    var needleLength = 50;
+    var needleHalfLength = needleLength / 2;
+    var numNeedlesToToss = 99999999;
+    var numToTossBeforeClear = 999999999; //5000;
+    var playingFieldWidth = window.innerWidth;
+    var playingFieldHeight = (Math.floor(window.innerHeight / needleLength) + 1) * needleLength;
+    var piApproxElem = document.getElementById("pi");
+
+    // First create playing field.
+    function createField() {
+        var numLines = Math.floor(playingFieldHeight/needleLength);
+        var t = numLines;
+        while (t-- > 0) {
+            ctx.fillStyle = "#00aa00";
+            ctx.fillRect(0, t * needleLength, window.innerWidth, 1);
+        }
+    }
+
+    function drawLine(x, y, halfWidth, halfHeight, crosses) {
+        if (crosses) {
+            ctx.strokeStyle = "#aaaaff";
+        } else {
+            ctx.strokeStyle = "#ffaaaa";
+        }
+        ctx.beginPath();
+        ctx.moveTo(x - halfWidth, y - halfHeight);
+        ctx.lineTo(x + halfWidth, y + halfHeight);
+        ctx.stroke();
+    }
+
+    var t = 0;
+    var numCrosses = 0;
+    function simulate() {
+        if (t % numToTossBeforeClear === 0) {
+            ctx.clearRect(0, 0, window.innerWidth, window.innerHeight);
+            createField();
+        }
+        if (t < numNeedlesToToss) {
+            var posX = Math.random() * playingFieldWidth;
+            var posY = Math.random() * playingFieldHeight;
+            var ang = Math.random() * Math.PI;
+
+            var needleBoxHalfHeight = needleHalfLength * Math.sin(ang);
+            var needleBoxHalfWidth = needleHalfLength * Math.cos(ang);
+
+            if (posY - needleBoxHalfHeight < 0) {
+                ++numCrosses;
+                drawLine(posX, posY, needleBoxHalfWidth, needleBoxHalfHeight, true);
+            } else {
+                var needleMiddleSection = Math.floor(posY / needleLength);
+                var needleEndSection = Math.floor((posY + needleBoxHalfHeight) / needleLength);
+                var needleStartSection = Math.floor((posY - needleBoxHalfHeight) / needleLength);
+                if (needleEndSection - needleMiddleSection === 1) {
+                    // the needle crosses a line.
+                    ++numCrosses;
+                    drawLine(posX, posY, needleBoxHalfWidth, needleBoxHalfHeight, true);
+                } else if (needleMiddleSection - needleStartSection === 1) {
+                    // the needle crosses a line.
+                    ++numCrosses;
+                    drawLine(posX, posY, needleBoxHalfWidth, needleBoxHalfHeight, true);
+                } else {
+                    drawLine(posX, posY, needleBoxHalfWidth, needleBoxHalfHeight, false);
+                }
+            }
+            ++t;
+            piApproxElem.innerHTML = 2 + " * " + t + " / " + numCrosses + " = " + ((t << 1) / numCrosses);
+            setTimeout(simulate, 0);
+        }
+        //piApproxElem.innerHTML = 2 + " * " + t + " / " + numCrosses + " = " + ((t << 1) / numCrosses);
+    }
+    simulate();
+})();
+</script>
+</body>
+</html>

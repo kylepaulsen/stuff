@@ -1,0 +1,265 @@
+<!DOCTYPE html>
+<html lang="en">
+    <head>
+        <meta charset="UTF-8">
+        <title>Path Finding with A*</title>
+        <style>
+        html {
+            -webkit-touch-callout: none;
+            -webkit-user-select: none;
+            -khtml-user-select: none;
+            -moz-user-select: none;
+            -ms-user-select: none;
+            user-select: none;
+        }
+        #mainCanvas {
+            border: 1px solid #000000;
+        }
+        #quadTreeCanvas {
+            position: absolute;
+            top: 1px;
+            left: 1px;
+            visibility: hidden;
+            z-index: 5;
+        }
+        #pathCanvas {
+            position: absolute;
+            top: 1px;
+            left: 1px;
+            visibility: hidden;
+            z-index: 7;
+        }
+        #playerCanvas {
+            position: absolute;
+            top: 1px;
+            left: 1px;
+            z-index: 10;
+        }
+        #canvasContainer {
+            position: relative;
+        }
+        </style>
+    </head>
+    <body>
+        <h1>Path Finding with A*</h1>
+        <p>Click and drag to create walls. Then click the "Move Mode" button and click somewhere on the canvas.</p>
+        <button id="drawBtn" disabled>Draw Mode</button>
+        <button id="moveBtn">Move Mode</button>
+        <button id="clearBtn">Clear Canvas</button>
+        Show Quad Tree: <input id="showQuadTree" type="checkbox">
+        Show Path: <input id="showPath" type="checkbox">
+        <br>
+        <div id="canvasContainer">
+            <canvas id="mainCanvas"></canvas>
+            <canvas id="quadTreeCanvas"></canvas>
+            <canvas id="pathCanvas"></canvas>
+            <canvas id="playerCanvas"></canvas>
+        </div>
+        <script src="quadTree.js"></script>
+        <script src="pather.js"></script>
+        <script src="priorityQueue.js"></script>
+        <script src="aStar.js"></script>
+        <script>
+            // I'm trying to do something like this:
+            // http://cs.stanford.edu/people/eroberts/courses/soco/projects/1998-99/robotics/basicmotion.html
+            var gid = document.getElementById.bind(document);
+            var width = 800;
+            var height = 600;
+            var drawMode = true;
+
+            var mainCanvas = gid("mainCanvas");
+            mainCanvas.width = width;
+            mainCanvas.height = height;
+            var mctx = mainCanvas.getContext("2d");
+            mctx.lineWidth = 10;
+            mctx.lineCap = "round";
+
+            var quadTreeCanvas = gid("quadTreeCanvas");
+            quadTreeCanvas.width = width;
+            quadTreeCanvas.height = height;
+            var qctx = quadTreeCanvas.getContext("2d");
+
+            var pathCanvas = gid("pathCanvas");
+            pathCanvas.width = width;
+            pathCanvas.height = height;
+            var pactx = pathCanvas.getContext("2d");
+            pactx.strokeStyle="#00aa00";
+            pactx.lineWidth = 4;
+
+            var playerCanvas = gid("playerCanvas");
+            playerCanvas.width = width;
+            playerCanvas.height = height;
+            var pctx = playerCanvas.getContext("2d");
+            pctx.fillStyle = "#ff0000";
+
+            var canvasContainer = gid("canvasContainer");
+            var canvasOffsetX = canvasContainer.offsetLeft;
+            var canvasOffsetY = canvasContainer.offsetTop;
+
+            var quadTree;
+            var mouseDown = false;
+            var lastX, lastY;
+
+            var playerSize = 5;
+            var playerWidth = playerSize * 2;
+            var playerX = width >> 1;
+            var playerY = height >> 1;
+            var isPlayerMoving = false;
+            var playerSpeed = 2;
+
+            var currentP;
+            var path;
+            var pathSpeed;
+
+            var drawBtn = gid("drawBtn");
+            var moveBtn = gid("moveBtn");
+            var clearBtn = gid("clearBtn");
+            var showQuadTree = gid("showQuadTree");
+            var showPath = gid("showPath");
+
+            window.addEventListener("mousedown", function(e) {
+                if (drawMode) {
+                    mouseDown = true;
+                    var x = e.pageX - canvasOffsetX;
+                    var y = e.pageY - canvasOffsetY;
+
+                    lastX = x;
+                    lastY = y;
+                }
+            });
+
+            window.addEventListener("mouseup", function(e) {
+                if (drawMode) {
+                    if (mouseDown) {
+                        mctx.stroke();
+                    }
+                    mouseDown = false;
+                } else {
+                    var x = e.pageX - canvasOffsetX;
+                    var y = e.pageY - canvasOffsetY;
+                    if (e.target === playerCanvas && x < width && y < height) {
+                        var start = quadTree.findQuadLeafFromPoint(playerX, playerY);
+                        var end = quadTree.findQuadLeafFromPoint(x, y);
+                        if (!end.wall) {
+                            console.time("Run A*");
+
+                            var nodePath = aStar(start, end, function() {
+                                return 1;
+                            }, function(a, b) {
+                                var xDiff = a.cx - b.cx;
+                                var yDiff = a.cy - b.cy;
+                                return xDiff * xDiff + yDiff * yDiff + b.width * b.height;
+                            });
+
+                            console.timeEnd("Run A*");
+                            var t = nodePath.length;
+                            var pathToFollow = [{x: playerX, y: playerY}];
+                            var node;
+                            if (t > 0) {
+                                for (var z = t - 2; z > 0; --z) {
+                                    node = nodePath[z];
+                                    pathToFollow.push({x: node.cx, y: node.cy});
+                                }
+                                pathToFollow.push({x: x, y: y});
+
+                                drawPath(pathToFollow);
+
+                                isPlayerMoving = true;
+                                currentP = 0;
+                                path = pather(pathToFollow);
+                                pathSpeed = 1 / (path.getTotalDistance() / playerSpeed);
+                            }
+                        }
+                    }
+                }
+            });
+
+            window.addEventListener("mousemove", function(e) {
+                if (drawMode) {
+                    if (mouseDown) {
+                        var x = e.pageX - canvasOffsetX;
+                        var y = e.pageY - canvasOffsetY;
+                        mctx.beginPath();
+                        mctx.moveTo(lastX, lastY);
+                        mctx.lineTo(x, y);
+                        mctx.stroke();
+                        lastX = x;
+                        lastY = y;
+                    }
+                }
+            });
+
+            moveBtn.addEventListener("click", function() {
+                drawMode = false;
+                moveBtn.setAttribute("disabled", "");
+                drawBtn.removeAttribute("disabled");
+                quadTree = quadTreeDecompose(mainCanvas);
+                qctx.clearRect(0, 0, width, height);
+                quadTree.drawCells(qctx);
+            });
+
+            drawBtn.addEventListener("click", function() {
+                drawBtn.setAttribute("disabled", "");
+                moveBtn.removeAttribute("disabled");
+                drawMode = true;
+            });
+
+            clearBtn.addEventListener("click", function() {
+                mctx.clearRect(0, 0, width, height);
+                qctx.clearRect(0, 0, width, height);
+                pactx.clearRect(0, 0, width, height);
+                quadTree = quadTreeDecompose(mainCanvas);
+            });
+
+            showQuadTree.addEventListener("click", function() {
+                if (showQuadTree.checked) {
+                    quadTreeCanvas.style.visibility = "visible";
+                } else {
+                    quadTreeCanvas.style.visibility = "hidden";
+                }
+            });
+
+            showPath.addEventListener("click", function() {
+                if (showPath.checked) {
+                    pathCanvas.style.visibility = "visible";
+                } else {
+                    pathCanvas.style.visibility = "hidden";
+                }
+            });
+
+            function drawPath(pathToFollow) {
+                pactx.clearRect(0, 0, width, height);
+                pactx.beginPath();
+                pactx.moveTo(pathToFollow[0].x, pathToFollow[0].y);
+                var pathPart;
+                for (var x = 1, len = pathToFollow.length; x < len; ++x) {
+                    pathPart = pathToFollow[x];
+                    pactx.lineTo(pathPart.x, pathPart.y);
+                    pactx.moveTo(pathPart.x, pathPart.y);
+                }
+                pactx.stroke();
+            }
+
+            function animate(timestamp) {
+                window.requestAnimationFrame(animate);
+
+                pctx.clearRect(0, 0, width, height);
+
+                if (isPlayerMoving) {
+                    var newPos = path.getPositionFromP(currentP);
+                    currentP += pathSpeed;
+                    playerX = newPos.x;
+                    playerY = newPos.y;
+                    pctx.fillRect(playerX - playerSize, playerY - playerSize, playerWidth, playerWidth);
+
+                    if (currentP > 1) {
+                        isPlayerMoving = false;
+                    }
+                } else {
+                    pctx.fillRect(playerX - playerSize, playerY - playerSize, playerWidth, playerWidth);
+                }
+            }
+            window.requestAnimationFrame(animate);
+        </script>
+    </body>
+</html>

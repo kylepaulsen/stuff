@@ -1,0 +1,357 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <title>B&eacute;zier Curves</title>
+</head>
+<body>
+    <h1>B&eacute;zier Curves</h1>
+    <h3>Works best in Firefox or Google Chrome.</h3>
+    <b>Instructions:</b><br/>
+    <ul>
+    <li>Click and drag to draw a line.</li>
+    <li>Click and drag circles to move control points.</li>
+    <li>Hold control and click on a white area to add a new control point.</li>
+    <li>Hold control and click on a control point to delete it.</li>
+    <li>Press the delete key to delete the selected line.</li>
+    </ul>
+    <div style="float: left;">
+    <table>
+        <tr><td>
+        Canvas Height:
+        </td><td>
+        <input type="text" id="chei" value="450" />
+        </td></tr>
+        <tr><td>
+        Canvas Width:
+        </td><td>
+        <input type="text" id="cwid" value="800" />
+        </td></tr>
+        <tr><td>
+        Bezier Iters:
+        </td><td>
+        <input type="text" id="step" value="30" />
+        </td></tr>
+    </table>
+    <input type="button" value="Apply Settings &amp; Redraw" id="apply" />
+    <input type="button" value="Clear Canvas" id="clearbtn" />
+    Show Control Points: <input type="checkbox" id="showCtrl" checked="checked" />
+    Only Show Active: <input type="checkbox" id="activeCtrl" />
+    </div>
+    <div style="clear: both; padding-top: 20px;">
+        <div id="canvasDiv" style="border: 1px solid #000;">
+            <canvas id="canvas"></canvas>
+        </div>
+    </div>
+    <script type="text/javascript">
+        'use strict';
+
+        // My version of jquery:
+        var $$ = document.querySelectorAll.bind(document);
+        NodeList.prototype.forEach = Array.prototype.forEach;
+
+        var ui = {};
+        $$('*[id]').forEach(function(el) {
+            ui[el.id] = el;
+        });
+
+        var canvas = ui.canvas;
+        var ctx = canvas.getContext('2d');
+        var canvasRect = canvas.getBoundingClientRect();
+        var cwid;
+        var chei;
+
+        var mouseDown = false;
+        var mouseDragging = false;
+        var mousePt = {};
+
+        var ctrlDown = false;
+
+        var curves = [];
+        var showCtrl = true;
+        var activeCtrl = false;
+        var selCurve;
+        var selCtrlPt;
+        var step = 0.03333333;
+        var ctrlPointRadius = 5;
+        var ctrlPointRadiusSq = ctrlPointRadius * ctrlPointRadius;
+
+        function getCanvasCoordFromMouse(e) {
+            return {
+                x: e.pageX - canvasRect.left,
+                y: e.pageY - canvasRect.top
+            };
+        }
+
+        function init() {
+            cwid = ui.cwid.value;
+            chei = ui.chei.value;
+
+            canvas.addEventListener('mousedown', function(e) {
+                mouseDown = true;
+                var canvasPt = getCanvasCoordFromMouse(e);
+
+                mousePt = canvasPt;
+
+                if (showCtrl) {
+                    if (checkForCtrlPt(canvasPt.x, canvasPt.y)) {
+                        drawCurves();
+                    }
+                } else {
+                    selCtrlPt = undefined;
+                }
+            });
+
+            canvas.addEventListener('mousemove', function(e) {
+                if (!mouseDown) {
+                    return false;
+                }
+                mouseDragging = true;
+                var canvasPt = getCanvasCoordFromMouse(e);
+
+                if (selCtrlPt !== undefined) {
+                    selCtrlPt.x = canvasPt.x;
+                    selCtrlPt.y = canvasPt.y;
+                    drawCurves();
+                } else {
+                    if (!ctrlDown) {
+                        var newCurve = new Curve(mousePt.x, mousePt.y, canvasPt.x, canvasPt.y);
+                        curves.push(newCurve);
+                        selCurve = newCurve;
+                        selCtrlPt = newCurve.ctrlPoints[1];
+                    }
+                }
+            });
+
+            window.addEventListener('mouseup', function(e) {
+                mouseDown = false;
+                var x = e.pageX;
+                var y = e.pageY;
+                x -= canvasRect.left;
+                y -= canvasRect.top;
+
+                if (ctrlDown) {
+                    if (selCtrlPt === undefined) {
+                        selCurve.addPoint(mousePt.x, mousePt.y);
+                    } else {
+                        selCurve.delCtrlPt(selCtrlPt);
+                        selCtrlPt = undefined;
+                    }
+                }
+
+                drawCurves();
+                mouseDragging = false;
+            });
+            window.addEventListener('keydown', function(e) {
+                var key_code = e.which;
+
+                if (key_code === 17) {
+                    //ctrl key
+                    ctrlDown = true;
+                } else if (key_code === 46) {
+                    //delete key
+                    if (selCurve !== undefined) {
+                        selCurve.delete();
+                    }
+                }
+            });
+            window.addEventListener('keyup', function(e) {
+                var key_code = e.which;
+                if (key_code === 17) {
+                    ctrlDown = false;
+                }
+            });
+
+            ui.clearbtn.addEventListener('click', resetEverything);
+            ui.apply.addEventListener('click', changeCanvas);
+            ui.showCtrl.addEventListener('change', function() {
+                showCtrl = ui.showCtrl.checked;
+                drawCurves();
+            });
+            ui.activeCtrl.addEventListener('change', function() {
+                activeCtrl = ui.activeCtrl.checked;
+                drawCurves();
+            });
+
+            ui.canvasDiv.style.width = cwid + 'px';
+            ui.canvasDiv.style.height = chei + 'px';
+            canvas.width = cwid;
+            canvas.height = chei;
+        }
+
+        function checkForCtrlPt(x, y) {
+            var j = curves.length;
+            while (j-- > 0) {
+                var curve = curves[j];
+                if (!activeCtrl || curve === selCurve) {
+                    var t = curve.ctrlPoints.length;
+                    while (t-- > 0) {
+                        if (isClickingPt(x, y, curve.ctrlPoints[t])) {
+                            selCtrlPt = curve.ctrlPoints[t];
+                            selCurve = curve;
+                            return true;
+                        }
+                    }
+                }
+            }
+            selCtrlPt = undefined;
+            return false;
+        }
+
+        function isClickingPt(x, y, pt) {
+            var xdiff = x - pt.x;
+            var ydiff = y - pt.y;
+            return (xdiff * xdiff + ydiff * ydiff) < ctrlPointRadiusSq;
+        }
+
+        function drawCurves() {
+            clearCanvas();
+            curves.forEach(function(curve) {
+                curve.draw();
+            });
+        }
+
+        function drawCircle(x, y, rad, stroke) {
+            if (stroke === undefined) {
+                stroke = true;
+            }
+            ctx.beginPath();
+            ctx.arc(x, y, rad, 0, 2 * Math.PI, false);
+            ctx.fill();
+            if (stroke) {
+                ctx.strokeStyle = '#000000';
+                ctx.stroke();
+            }
+        }
+
+        function CtrlPoint(x, y) {
+            this.x = x;
+            this.y = y;
+        }
+        CtrlPoint.prototype.draw = function(selected) {
+            if (selected === undefined || selected === false) {
+                ctx.fillStyle = '#DDDDDD';
+            } else {
+                ctx.fillStyle = '#8ED6FF';
+            }
+            drawCircle(this.x, this.y, ctrlPointRadius);
+        };
+
+        function Curve(startx, starty, endx, endy) {
+            this.startx = startx;
+            this.starty = starty;
+            this.endx = endx;
+            this.endy = endy;
+
+            this.ctrlPoints = [new CtrlPoint(startx, starty), new CtrlPoint(endx, endy)];
+        }
+        Curve.prototype.addPoint = function(x, y) {
+            this.ctrlPoints.push(new CtrlPoint(x, y));
+        };
+        Curve.prototype.draw = function() {
+            var n = this.ctrlPoints.length - 1;
+            var binoms = pascal_row(n);
+            if (showCtrl) {
+                if ((activeCtrl && selCurve === this) || !activeCtrl) {
+                    this.drawCtrlPoints(this === selCurve);
+                }
+            }
+            ctx.beginPath();
+            ctx.moveTo(this.ctrlPoints[0].x, this.ctrlPoints[0].y);
+            for (var t = step; t <= 1; t = truncate(t + step)) {
+                var ptx = 0;
+                var pty = 0;
+                for (var i = 0; i < n + 1; ++i) {
+                    var coef = binoms[i] * Math.pow(1 - t, n - i) * Math.pow(t, i);
+                    ptx += this.ctrlPoints[i].x * coef;
+                    pty += this.ctrlPoints[i].y * coef;
+                }
+                ctx.lineTo(ptx, pty);
+            }
+            ctx.stroke();
+        };
+        Curve.prototype.drawCtrlPoints = function(selected) {
+            this.ctrlPoints.forEach(function(ctrlPoint) {
+                ctrlPoint.draw(selected);
+            });
+        };
+        Curve.prototype.delete = function() {
+            var t = curves.length;
+            while (t-- > 0) {
+                if (curves[t] === this) {
+                    curves.splice(t, 1);
+                    break;
+                }
+            }
+            selCurve = curves[curves.length - 1];
+            drawCurves();
+        };
+        Curve.prototype.delCtrlPt = function(ctrlPt) {
+            var t = this.ctrlPoints.length;
+            while (t-- > 0) {
+                if (this.ctrlPoints[t] === ctrlPt) {
+                    this.ctrlPoints.splice(t, 1);
+                    break;
+                }
+            }
+            if (this.ctrlPoints.length === 1) {
+                this.delete();
+            }
+        };
+
+        function pascal_row(n) {
+            var c_max = n + 1;
+            var ans = [];
+            ans[0] = 1;
+            for (var x = 1; x < c_max; ++x) {
+                ans[x] = ans[x - 1] * (c_max - x) / x;
+            }
+            return ans;
+        }
+
+        function randInt(low, high) {
+            return Math.floor(Math.random() * (high - low + 1)) + low;
+        }
+
+        function changeCanvas() {
+            cwid = ui.cwid.value;
+            chei = ui.chei.value;
+
+            ui.canvasDiv.style.width = cwid + 'px';
+            ui.canvasDiv.style.height = chei + 'px';
+            canvas.width = cwid;
+            canvas.height = chei;
+
+            step = 1 / ui.step.value;
+
+            drawCurves();
+        }
+
+        function resetEverything() {
+            clearCanvas();
+            curves = [];
+        }
+
+        function clearCanvas() {
+            ctx.fillStyle = 'white';
+            ctx.fillRect(0, 0, cwid, chei);
+        }
+
+        //this function exists because javascript has problems with adding many floats together.
+        function truncate(x) {
+            return Math.floor(100000000 * x) / 100000000;
+        }
+
+        function makeRandomCurve(stx, sty, edx, edy, numPts) {
+            var newCurve = new Curve(stx, sty, edx, edy);
+            curves.push(newCurve);
+            for (var x = 0; x < numPts; ++x) {
+                var ctrlPt = new CtrlPoint(randInt(0, cwid), randInt(0, chei));
+                newCurve.ctrlPoints.splice(1, 0, ctrlPt);
+            }
+            drawCurves();
+        }
+
+        init();
+    </script>
+</body>
+</html>

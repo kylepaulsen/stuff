@@ -1,0 +1,184 @@
+<!DOCTYPE html>
+<html lang="en">
+    <head>
+        <title>three.js test</title>
+        <meta charset="utf-8">
+        <meta name="viewport" content="width=device-width, user-scalable=no, minimum-scale=1.0, maximum-scale=1.0">
+        <link rel="stylesheet" type="text/css" href="style.css">
+    </head>
+    <body>
+
+        <div id="container"><br><br><br><br><br>Generating world...</div>
+        <div id="info"></div>
+
+        <div id="blocker">
+            <div id="instructions">
+                <span style="font-size:40px">Click to play</span>
+                <br>
+                (W, A, S, D, Q, E, R, F = Move, MOUSE = Look around)
+            </div>
+        </div>
+
+
+        <script src="three.min.js"></script>
+        <script src="js/controls/SpaceFlyControls.js"></script>
+        <!--<script src="js/loaders/OBJLoader.js"></script>-->
+
+        <script src="js/Detector.js"></script>
+        <script src="js/PointerLockUI.js"></script>
+        <script src="js/libs/stats.min.js"></script>
+
+        <script>
+
+            if (!Detector.webgl) {
+                Detector.addGetWebGLMessage();
+                document.getElementById('container').innerHTML = "";
+            }
+
+            var container, stats;
+            var camera, controls, scene, renderer;
+            var clock = new THREE.Clock();
+
+            init();
+            animate();
+
+            var starMesh;
+            var spaceship;
+            var bgScene;
+            var headLight;
+            var dashboard;
+
+            function init() {
+
+                container = document.getElementById( 'container' );
+
+                camera = new THREE.PerspectiveCamera(75, window.innerWidth / window.innerHeight, 1, 30000);
+                camera.position.y = 0;
+
+                scene = new THREE.Scene();
+                bgScene = new THREE.Scene();
+
+                controls = new THREE.SpaceFlyControls(camera);
+                controls.enabled = false;
+
+                setupPointerLock(controls);
+
+                spaceship = new THREE.Object3D();
+
+                var somethingToLookAt = new THREE.Object3D();
+                somethingToLookAt.position.z = -13;
+                somethingToLookAt.position.x = -5;
+                somethingToLookAt.rotation.y = Math.PI/2;
+                scene.add(somethingToLookAt);
+                window.spaceship2 = somethingToLookAt;
+
+                var lol = new THREE.Object3D();
+                lol.position.z = 750; //7.5
+                scene.add(lol);
+
+                var loader = new THREE.JSONLoader();
+                loader.load('spaceship.js', function(object, materials) {
+                    var mesh = new THREE.Mesh(object, materials[0]);
+                    mesh.rotation.y = Math.PI;
+                    mesh.scale.set(2,2,2);
+                    mesh.position.set(0, -1.8, 3);
+                    mesh.rotation.x = 0.06;
+                    spaceship.add(mesh);
+                    somethingToLookAt.add(mesh.clone());
+                    lol.add(mesh.clone());
+                });
+                loader.load('spaceship_glass.js', function(object, materials) {
+                    var mesh = new THREE.Mesh(object, materials[0]);
+                    mesh.rotation.y = Math.PI;
+                    mesh.scale.set(2,2,2);
+                    mesh.position.set(0, -1.8, 3);
+                    mesh.rotation.x = 0.06;
+                    spaceship.add(mesh);
+                    somethingToLookAt.add(mesh.clone());
+                });
+
+                dashboard = new THREE.Mesh(new THREE.PlaneGeometry(2, 0.6), new THREE.MeshBasicMaterial({
+                    color: 0x000000
+                }));
+                dashboard.rotation.x = -0.34;
+                dashboard.position.set(0, -1.0, -1.62);
+                spaceship.add(dashboard);
+
+                scene.add(spaceship);
+
+                var ambientLight = new THREE.AmbientLight(0x111111);
+                scene.add( ambientLight );
+
+                headLight = new THREE.PointLight( 0xaaaaaa, 3, 500);
+                headLight.position.set(0, 0, 0);
+                spaceship.add(headLight);
+
+                var starSphere  = new THREE.SphereGeometry(90, 32, 32);
+                var starMaterial = new THREE.MeshBasicMaterial({depthWrite: false, depthTest: false, side: THREE.BackSide});
+                starMaterial.map   = THREE.ImageUtils.loadTexture('images/galaxy_starfield.png');
+                starMaterial.side  = THREE.BackSide;
+                starMesh  = new THREE.Mesh(starSphere, starMaterial);
+                bgScene.add(starMesh);
+
+                var sun = new THREE.Mesh(new THREE.SphereGeometry(6000, 32, 32), new THREE.MeshBasicMaterial({color: 0xffee00}));
+                sun.position.z = -6500;
+                scene.add(sun);
+
+                renderer = new THREE.WebGLRenderer( { alpha: false } );
+                renderer.setClearColor( 0xbfd1e5, 1 );
+                renderer.setSize( window.innerWidth, window.innerHeight );
+                renderer.autoClear = false;
+
+                container.innerHTML = "";
+
+                container.appendChild( renderer.domElement );
+
+                stats = new Stats();
+                stats.domElement.style.position = 'absolute';
+                stats.domElement.style.top = '0px';
+                container.appendChild( stats.domElement );
+
+                window.addEventListener( 'resize', onWindowResize, false );
+
+            }
+
+            function onWindowResize() {
+                camera.aspect = window.innerWidth / window.innerHeight;
+                camera.updateProjectionMatrix();
+                renderer.setSize(window.innerWidth, window.innerHeight);
+            }
+
+            var renderOnce = true;
+            function animate() {
+                requestAnimationFrame(animate);
+                if (controls.enabled || renderOnce) {
+                    render();
+                    stats.update();
+                    renderOnce = false;
+                } else {
+                    clock.getDelta();
+                }
+            }
+
+            function render() {
+                renderer.clear();
+                controls.update(clock.getDelta());
+
+                // keep the sky dome in the same spot.
+                starMesh.position.copy(camera.position);
+
+                // keep the spaceship on the camera.
+                spaceship.position.copy(camera.position);
+                spaceship.rotation.copy(camera.rotation);
+                spaceship.quaternion.multiply(controls.internalRotationQuat);
+
+                // render the sky dome first
+                renderer.render(bgScene, camera);
+                // now everything else
+                renderer.render(scene, camera);
+            }
+
+        </script>
+
+    </body>
+</html>

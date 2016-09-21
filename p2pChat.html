@@ -1,0 +1,499 @@
+<!doctype html>
+<html>
+<head>
+    <meta charset="UTF-8">
+    <title>WebRTC p2p Chat</title>
+    <style>
+    #msgDiv {
+        width: 500px;
+        height: 400px;
+        border: 1px solid #000;
+        overflow-y: auto;
+    }
+    #overlay {
+        position: fixed;
+        top: 0;
+        left: 0;
+        bottom: 0;
+        right: 0;
+        background: rgba(0,0,0,0.5);
+        display: none;
+        z-index: 5;
+    }
+    #connectingModal {
+        text-align: center;
+    }
+    .modal {
+        width: 450px;
+        height: 300px;
+        position: absolute;
+        z-index: 10;
+        top: 100px;
+        left: 50%;
+        transform: translateX(-50%);
+        background: #ffffff;
+        padding: 6px;
+        display: none;
+    }
+    .modal textarea {
+        width: 440px;
+        height: 240px;
+    }
+    .readOnly {
+        background: #CCCCCC;
+    }
+    </style>
+</head>
+<body>
+<p>This is an example of a Peer 2 Peer multi-user-chat program using WebRTC and WITHOUT using a signaling server.</p>
+<p>You can try this by yourself by opening up multiple tabs of this same page.</p>
+<div id="overlay"></div>
+<div id="sendOfferModal" class="modal">
+    Here is your invite text. Copy paste it to your friend: <br>
+    <textarea id="sendOfferTextArea" readonly="" class="readOnly"></textarea>
+    <button id="sendOfferBtn">I sent it.</button>
+</div>
+<div id="getAnswerModal" class="modal">
+    Now paste in the text they send back to you: <br>
+    <textarea id="getAnswerTextArea"></textarea>
+    <button id="getAnswerBtn">OK</button>
+</div>
+<div id="getOfferModal" class="modal">
+    Paste in the invite text your friend sent you: <br>
+    <textarea id="getOfferTextArea"></textarea>
+    <button id="getOfferBtn">OK</button>
+</div>
+<div id="sendAnswerModal" class="modal">
+    Now send this back to your friend: <br>
+    <textarea id="sendAnswerTextArea" readonly="" class="readOnly"></textarea>
+    <button id="sendAnswerBtn">I sent it.</button>
+</div>
+<div id="connectingModal" class="modal">
+    <h2>Connecting.</h2><h3>Please Wait...</h3>
+</div>
+
+<div id="connectionStuff">
+    <button id="inviteFriendBtn">Invite Friend</button>
+    <button id="joinFriendBtn">Join Friend (got invite data)</button>
+</div>
+<div id="chatStuff" style="display: none;">
+    <div id="msgDiv"></div>
+    Message: <input type="text" id="msgBox"> <input type="button" id="sendBtn" value="Send">
+</div>
+
+<script>
+// LZW-compress a string
+function lzw_encode(s) {
+    var dict = {};
+    var data = (s + "").split("");
+    var out = [];
+    var currChar;
+    var phrase = data[0];
+    var code = 256;
+    for (var i=1; i<data.length; i++) {
+        currChar=data[i];
+        if (dict[phrase + currChar] != null) {
+            phrase += currChar;
+        }
+        else {
+            out.push(phrase.length > 1 ? dict[phrase] : phrase.charCodeAt(0));
+            dict[phrase + currChar] = code;
+            code++;
+            phrase=currChar;
+        }
+    }
+    out.push(phrase.length > 1 ? dict[phrase] : phrase.charCodeAt(0));
+    for (var i=0; i<out.length; i++) {
+        out[i] = String.fromCharCode(out[i]);
+    }
+    return out.join("");
+}
+
+// Decompress an LZW-encoded string
+function lzw_decode(s) {
+    var dict = {};
+    var data = (s + "").split("");
+    var currChar = data[0];
+    var oldPhrase = currChar;
+    var out = [currChar];
+    var code = 256;
+    var phrase;
+    for (var i=1; i<data.length; i++) {
+        var currCode = data[i].charCodeAt(0);
+        if (currCode < 256) {
+            phrase = data[i];
+        }
+        else {
+           phrase = dict[currCode] ? dict[currCode] : (oldPhrase + currChar);
+        }
+        out.push(phrase);
+        currChar = phrase.charAt(0);
+        dict[code] = oldPhrase + currChar;
+        code++;
+        oldPhrase = phrase;
+    }
+    return out.join("");
+}
+</script>
+
+<script type="text/javascript">
+
+/* ===== start serverless webRTC lib ===== */
+
+var serverlessWebRTC = (function() {
+    var RTCPeerConnection = window.RTCPeerConnection || window.webkitRTCPeerConnection;
+    if (!RTCPeerConnection) {
+        alert("Your browser is not supported.");
+    }
+
+    // http://stackoverflow.com/questions/20068944/webrtc-stun-stun-l-google-com19302
+    var iceServers = {
+        iceServers: [{
+            url: "stun:23.21.150.121"
+        }]
+    };
+    // var iceServers = null;
+
+    var optionalConfig = {
+        optional: [{
+            DtlsSrtpKeyAgreement: true
+        }]
+    };
+    //var optionalConfig = null;
+
+    // not needed?
+    /*
+    var mediaConstraints = {
+        optional: [],
+        mandatory: {
+            OfferToReceiveAudio: false,
+            OfferToReceiveVideo: false
+        }
+    };
+    */
+    var givenIds = {};
+
+    function makePeerId() {
+        var id;
+        while (!id || givenIds[id]) {
+            id = Math.floor(Math.random() * 1000000);
+        }
+        givenIds[id] = true;
+        return id;
+    }
+
+    function makeOffer(offerCallback, dataChannelCallback) {
+        offerCallback = offerCallback || function() {};
+        dataChannelCallback = dataChannelCallback || function() {};
+
+        var peerCon = new RTCPeerConnection(iceServers, optionalConfig);
+
+        var peerConDataChannel = peerCon.createDataChannel("test");
+        peerConDataChannel.peerId = makePeerId();
+
+        peerCon.onicecandidate = function(e) {
+            console.log("onicecandidate...");
+            if (e.candidate === null) {
+                offerCallback(JSON.stringify(peerCon.localDescription));
+            }
+        };
+
+        peerCon.createOffer(function(description) {
+            console.log("Creating offer...");
+            peerCon.setLocalDescription(description);
+        }, function(e) {
+            console.log("Could not create offer!", e);
+        });
+
+        function setAnswer(ans) {
+            var desc = new RTCSessionDescription(JSON.parse(ans));
+            peerCon.setRemoteDescription(desc);
+        }
+
+        var pub = {
+            setAnswer: setAnswer,
+            channel: peerConDataChannel
+        };
+
+        dataChannelCallback(peerConDataChannel, pub);
+
+        return pub;
+    }
+
+    function makeAnswer(offer, answerCallback, dataChannelCallback) {
+        answerCallback = answerCallback || function() {};
+        dataChannelCallback = dataChannelCallback || function() {};
+
+        var peerCon = new RTCPeerConnection(iceServers, optionalConfig);
+
+        var peerConDataChannel;
+
+        peerCon.onicecandidate = function (e) {
+            console.log("onicecandidate...");
+            if (e.candidate === null) {
+                answerCallback(JSON.stringify(peerCon.localDescription));
+            }
+        };
+
+        var offerDesc = new RTCSessionDescription(JSON.parse(offer));
+
+        peerCon.setRemoteDescription(offerDesc);
+
+        peerCon.createAnswer(function(answerDesc) {
+            console.log("Creating answer...");
+            peerCon.setLocalDescription(answerDesc);
+        }, function() {
+            console.log("Could not create answer!");
+        });
+
+        peerCon.ondatachannel = function(e) {
+            peerConDataChannel = e.channel || e;
+            peerConDataChannel.peerId = makePeerId();
+            pub.channel = peerConDataChannel;
+            dataChannelCallback(peerConDataChannel, pub);
+        };
+
+        var pub = {};
+
+        return pub;
+    }
+
+    return {
+        makeOffer: makeOffer,
+        makeAnswer: makeAnswer
+    };
+})();
+
+/* ===== end serverless webRTC lib ===== */
+
+var ui = {};
+var connectionMap = {};
+var pendingOffers = {};
+var currentConn;
+var errTimeout;
+
+function getAllUI() {
+    var allUI = document.querySelectorAll("[id]");
+    var x = allUI.length;
+    while (x--) {
+        ui[allUI[x].id] = allUI[x];
+    }
+}
+getAllUI();
+
+function listen(el, eventName, func) {
+    el.addEventListener(eventName, func, false);
+}
+
+function addMessage(msg) {
+    ui.msgDiv.innerHTML += msg + "<br>";
+    ui.msgDiv.scrollTop = 99999;
+}
+
+function safeSend(channel, obj) {
+    var msg = obj;
+    try {
+        if (typeof obj === "object") {
+            msg = JSON.stringify(obj);
+        }
+        channel.send(msg);
+    } catch(e) {
+        if (e.stack) {
+            console.error(e.stack);
+        }
+        console.error(e);
+    }
+}
+
+function broadcast(obj) {
+    var msg = JSON.stringify(obj);
+    Object.keys(connectionMap).forEach(function(peerId) {
+        var conn = connectionMap[peerId];
+        if (conn) {
+            safeSend(conn.channel, msg);
+        }
+    });
+}
+
+function sendMessage() {
+    addMessage("<b>You:</b> " + ui.msgBox.value);
+    broadcast({
+        cmd: "text",
+        text: ui.msgBox.value
+    });
+    ui.msgBox.value = "";
+}
+
+
+function setChannelEvents(channel, connection, manualConnection) {
+    connectionMap[channel.peerId] = connection;
+
+    var commands = {
+        text: function(data) {
+            addMessage("<b>[Peer " + channel.peerId + "]:</b> " + data.text);
+        },
+        makeOffer: function(data, whoOrderedCmd) {
+            console.log("I was told to make an offer for someone named: " + data.forId);
+            var newCon = serverlessWebRTC.makeOffer(function(offer) {
+                safeSend(whoOrderedCmd, {
+                    cmd: "deliverOffer",
+                    forId: data.forId,
+                    offer: offer
+                });
+            }, setChannelEvents);
+            pendingOffers[data.forId] = newCon;
+        },
+        deliverOffer: function(data, whoOrderedCmd) {
+            console.log("I was told to pass along an offer from someone named: " + whoOrderedCmd.peerId);
+            console.log("Passing along the offer with a makeAnswer command to someone named: " + data.forId);
+            safeSend(connectionMap[data.forId].channel, {
+                cmd: "makeAnswer",
+                forId: whoOrderedCmd.peerId,
+                offer: data.offer
+            });
+        },
+        makeAnswer: function(data, whoOrderedCmd) {
+            console.log("I was told to make an answer for someone named: " + data.forId);
+            var newCon = serverlessWebRTC.makeAnswer(data.offer, function(answer) {
+                safeSend(whoOrderedCmd, {
+                    cmd: "deliverAnswer",
+                    forId: data.forId,
+                    answer: answer
+                });
+            }, setChannelEvents);
+        },
+        deliverAnswer: function(data, whoOrderedCmd) {
+            console.log("I was told to pass along an answer from someone named: " + whoOrderedCmd.peerId);
+            console.log("Passing along the answer with a recieveAnswer command to someone named: " + data.forId);
+            safeSend(connectionMap[data.forId].channel, {
+                cmd: "recieveAnswer",
+                forId: whoOrderedCmd.peerId,
+                answer: data.answer
+            });
+        },
+        recieveAnswer: function(data) {
+            console.log("I was told to recieve and answer for someone named: " + data.forId);
+            var pendingOffer = pendingOffers[data.forId];
+            if (pendingOffer) {
+                pendingOffer.setAnswer(data.answer);
+                pendingOffers[data.forId] = undefined;
+            }
+        }
+    };
+
+    channel.onmessage = function(e) {
+        var data = JSON.parse(e.data);
+        var cmd = commands[data.cmd];
+        if (cmd) {
+            cmd(data, channel);
+        }
+    };
+    channel.onopen = function() {
+        ui.chatStuff.style.display = "block";
+        ui.overlay.style.display = "none";
+        ui.connectingModal.style.display = "none";
+        ui.sendAnswerModal.style.display = "none";
+        clearTimeout(errTimeout);
+        addMessage("<b>You have connected to peer " + channel.peerId + "!</b><br>");
+
+        var peerIds = Object.keys(connectionMap);
+        if (manualConnection && peerIds.length > 1) {
+            peerIds.forEach(function(peerId) {
+                var conn = connectionMap[peerId];
+                if (conn && conn.channel !== channel) {
+                    safeSend(conn.channel, {
+                        cmd: "makeOffer",
+                        forId: channel.peerId
+                    });
+                }
+            });
+        }
+    };
+    channel.onclose = function(e) {
+        addMessage("Peer " + channel.peerId + " has disconnected!");
+        connectionMap[channel.peerId] = undefined;
+    };
+    channel.onerror = function(e) {
+        console.error(e);
+    };
+}
+
+function connectionError() {
+    ui.overlay.style.display = "none";
+    ui.connectingModal.style.display = "none";
+    alert("Connection failed... Try again...");
+}
+
+listen(ui.inviteFriendBtn, "click", function() {
+    ui.overlay.style.display = "block";
+    ui.sendOfferModal.style.display = "block";
+    ui.sendOfferTextArea.value = "Please wait...";
+    ui.sendOfferBtn.disabled = true;
+    var newCon = serverlessWebRTC.makeOffer(function(offer) {
+        ui.sendOfferTextArea.value = lzw_encode(offer);
+        ui.sendOfferBtn.disabled = false;
+    }, function(chan, con) {
+        setChannelEvents(chan, con, true);
+    });
+    currentConn = newCon;
+});
+
+listen(ui.sendOfferBtn, "click", function() {
+    ui.sendOfferModal.style.display = "none";
+    ui.getAnswerModal.style.display = "block";
+    ui.getAnswerTextArea.value = "";
+});
+
+listen(ui.getAnswerBtn, "click", function() {
+    currentConn.setAnswer(lzw_decode(ui.getAnswerTextArea.value));
+    ui.getAnswerModal.style.display = "none";
+    ui.connectingModal.style.display = "block";
+    errTimeout = setTimeout(connectionError, 15000);
+});
+
+listen(ui.joinFriendBtn, "click", function() {
+    ui.overlay.style.display = "block";
+    ui.getOfferModal.style.display = "block";
+    ui.getOfferTextArea.value = "";
+});
+
+listen(ui.getOfferBtn, "click", function() {
+    ui.getOfferModal.style.display = "none";
+    ui.sendAnswerModal.style.display = "block";
+    ui.sendAnswerTextArea.value = "Please wait...";
+    ui.sendAnswerBtn.disabled = true;
+    serverlessWebRTC.makeAnswer(lzw_decode(ui.getOfferTextArea.value), function(answer) {
+        ui.sendAnswerTextArea.value = lzw_encode(answer);
+        ui.sendAnswerBtn.disabled = false;
+    }, function(chan, con) {
+        setChannelEvents(chan, con, true);
+    });
+});
+
+listen(ui.sendAnswerBtn, "click", function() {
+    ui.sendAnswerModal.style.display = "none";
+    ui.connectingModal.style.display = "block";
+    errTimeout = setTimeout(connectionError, 15000);
+});
+
+listen(ui.msgBox, "keydown", function(e) {
+    if (e.which === 13) {
+        sendMessage();
+    }
+});
+
+listen(ui.sendBtn, "click", function() {
+    sendMessage();
+});
+
+listen(ui.sendOfferTextArea, "focus", function() {
+    ui.sendOfferTextArea.select();
+});
+
+listen(ui.sendAnswerTextArea, "focus", function() {
+    ui.sendAnswerTextArea.select();
+});
+
+</script>
+</body>
+</html>

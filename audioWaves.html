@@ -1,0 +1,355 @@
+<html>
+<head>
+<title>Audio API Wave Maker</title>
+</head>
+<body>
+<!--
+Yeah... I was really freakin lazy about this... sorry.
+
+Some credit goes to Eliot Winder, as I went to his SO page and stole some of his code. Here's the link:
+http://stackoverflow.com/questions/30631595/custom-wave-forms-in-web-audio-api
+-->
+<div>
+    <canvas id="canvas" width="2048" height="300" style="border: 1px solid #000000"></canvas>
+</div>
+<div style="margin: 20px 0px;">
+    <div style="float: left; width: 70px"><button id="playpause">Play</button></div>
+    <div style="float: left; width: 120px"><button id="randfreq">Rand Freq Off</button></div>
+    <div style="float: left; width: 480px">Freq: <input size="5" id="freq" value="220"> <input type="range" min="0" max="1500" value="220" step="10" id="freqSlider" style="width: 340px;"></div>
+    <div style="float: left; width: 200px">Volume: <input type="range" min="0" max="1" value="0.2" step="0.05" id="volume"></div>
+    <div style="float: left;">Num Coefficients: <input id="numCoefs" size="3" value="64"></div>
+    <div style="clear: both;"></div>
+</div>
+<div style="float: left; text-align: center; position: relative; margin-left: 20px;">
+    <h3>Fourier Coefficients</h3>
+    <div style="position: absolute; right: 4px; top: 20px;">
+        <button id="calcCoef">Calculate</button>
+    </div>
+    <div style="position: absolute; top: 20px; left: 0;">
+        Presets:
+        <select id="presets">
+            <option value="">--- Select ---</option>
+            <option value="sin">Sine</option>
+            <option value="square">Square</option>
+            <option value="triangle">Triangle</option>
+            <option value="sawtooth">Sawtooth</option>
+            <option value="pulse">Pulse</option>
+            <option value="wtf">WTF</option>
+        </select>
+    </div>
+    <table id="coefs" style="border-collapse: collapse;" cellpadding="4">
+        <tr>
+            <td style="border-right: 1px solid #000000;">N</td>
+            </td><td>
+            <td>Real Equ (cosine)</td>
+            </td><td>
+            <td>Imaginary Equ (sine)</td>
+        </tr>
+        <tr style="border-bottom: 1px solid #000000;">
+            <td style="border-right: 1px solid #000000;"></td>
+            <td>Rn = </td>
+            <td><input id="realEqu" size="40" value="0"></td>
+            <td>In = </td>
+            <td><input id="imagEqu" size="40" value="n === 1 ? 1 : 0"></td>
+        </tr>
+    </table>
+    <table  style="border-collapse: collapse;" cellpadding="4">
+    </table>
+</div>
+<script>
+    "use strict";
+    var $ = document.querySelector.bind(document);
+    var $$ = document.querySelectorAll.bind(document);
+    var width = 1024;
+    var height = 300;
+
+    var freq = 220;
+    var randFreqOn = false;
+
+    var bufferSize = 2048;
+
+    var numCoefs = 64;
+
+    var c = $("#canvas");
+    c.width = width;
+    c.height = height;
+
+    var ctx = c.getContext("2d");
+
+    //setup audio context
+    window.AudioContext = window.AudioContext || window.webkitAudioContext;
+    var context = new AudioContext();
+
+    //create nodes
+    var osc; //create in event listener so we can press the button more than once
+    var masterGain = context.createGain();
+    masterGain.gain.value = 0.2;
+    var analyser = context.createAnalyser();
+
+    //routing
+    masterGain.connect(analyser);
+    analyser.connect(context.destination);
+
+    var isPlaying = false;
+    var waveNormalize = ((height - 20) / 2) / (masterGain.gain.value);
+
+    //draw function for canvas
+    function drawWave() {
+        var buffer = new Float32Array(bufferSize);
+
+        ctx.strokeStyle = "#777777";
+        // scalex, skewx, skewy, scaley, movex, movey
+        ctx.setTransform(1, 0, 0, -1, 0, height / 2); // flip y-axis and translate to center
+        ctx.lineWidth = 2;
+
+        var xScale = width / bufferSize;
+
+        (function loop() {
+            analyser.getFloatTimeDomainData(buffer);
+
+            ctx.clearRect(0, -height/2, width, height);
+
+            ctx.beginPath();
+            ctx.moveTo(0, buffer[0] * waveNormalize);
+            for (var x = 1; x < bufferSize; ++x) {
+                ctx.lineTo(x * xScale, buffer[x] * waveNormalize);
+            }
+            ctx.stroke();
+
+            if (isPlaying) {
+                requestAnimationFrame(loop);
+            }
+        })();
+    }
+
+    // make 0-line permanent as background
+    ctx.moveTo(0, height / 2);
+    ctx.lineTo(width, height / 2);
+    ctx.stroke();
+    c.style.backgroundImage = "url(" + c.toDataURL() + ")";
+
+    var playPauseBtn = $("#playpause");
+
+    function startPlaying() {
+        isPlaying = true;
+        playPauseBtn.innerText = "Pause";
+
+        //osc settings
+        osc = context.createOscillator();
+        osc.frequency.value = freq;
+
+        var imag = new Float32Array(numCoefs); // sin
+        var real = new Float32Array(numCoefs); // cos
+        var inputs = $$(".coef");
+        for (var t = 0; t < numCoefs; ++t) {
+            real[t] = parseFloat(inputs[t * 2].value);
+            imag[t] = parseFloat(inputs[t * 2 + 1].value);
+        }
+
+        var customWave = context.createPeriodicWave(real, imag); //cos, sin
+        osc.setPeriodicWave(customWave);
+
+        osc.connect(masterGain);
+        osc.start();
+
+        drawWave();
+    }
+
+    function stopPlaying() {
+        isPlaying = false;
+        playPauseBtn.innerText = "Play";
+        osc.stop();
+    }
+
+    playPauseBtn.addEventListener("mousedown", function() {
+        if (!isPlaying) {
+            startPlaying();
+        } else {
+            stopPlaying();
+        }
+    });
+
+    var volumeSlider = $("#volume");
+    volumeSlider.addEventListener("input", function() {
+        masterGain.gain.value = volumeSlider.value;
+        waveNormalize = ((height - 20) / 2) / (masterGain.gain.value);
+    });
+
+    var freqSlider = $("#freqSlider");
+    var freqE = $("#freq");
+
+    function setFreq(val) {
+        freq = val;
+        try {
+            osc.frequency.value = val;
+        } catch(e) {}
+        freqE.value = val;
+        freqSlider.value = val;
+    }
+
+    freqSlider.addEventListener("input", function() {
+        var val = freqSlider.value;
+        setFreq(val);
+    });
+
+    freqE.addEventListener("keyup", function() {
+        var val = parseFloat(freqE.value);
+        if (!isNaN(val) && val > 0 && val !== freq) {
+            freq = val;
+            try {
+                osc.frequency.value = val;
+            } catch(e) {}
+            freqSlider.value = val;
+        }
+    });
+
+    var numCoefsE = $("#numCoefs");
+    numCoefsE.addEventListener("keyup", function() {
+        var nCoefs = parseInt(numCoefsE.value, 10);
+        if (!isNaN(nCoefs) && nCoefs > 1 && nCoefs < 1000 && numCoefs !== nCoefs) {
+            numCoefs = nCoefs;
+
+            var coefs = $$(".coef");
+            var coefTable = $("#coefs");
+            for (var t = 0; t < coefs.length; t += 2) {
+                var tr = coefs[t].parentElement.parentElement;
+                while (tr.parentElement !== coefTable) {
+                    tr = tr.parentElement;
+                }
+                coefTable.removeChild(tr);
+            }
+            makeCoefInputs();
+            calculateCoefs();
+        }
+    });
+
+    var presetEqus = {
+        sin: {
+            real: "0",
+            imag: "n === 1 ? 1 : 0"
+        },
+        square: {
+            real: "sin(n * pi * 0.5) * 4 / (n * pi)",
+            imag: "0"
+        },
+        triangle: {
+            real: "0",
+            imag: "((sin(n * pi) + 1) / 2) * sin(n * pi / 2) / (n * n)"
+        },
+        sawtooth: {
+            real: "0",
+            imag: "-1 / n"
+        },
+        pulse: {
+            real: "sin(n * pi * 0.2) * 2 / (n * pi)",
+            imag: "0"
+        },
+        wtf: {
+            real: "(random() / n) * sin(n * pi * 0.1)",
+            imag: "(random() / n)"
+        }
+    };
+
+    var realEqu = $("#realEqu");
+    var imagEqu = $("#imagEqu");
+    var presets = $("#presets");
+    presets.addEventListener("change", function() {
+        var equs = presetEqus[presets.value];
+        if (equs) {
+            realEqu.value = equs.real;
+            imagEqu.value = equs.imag;
+            calculateCoefs();
+        }
+        presets.value = "";
+    });
+
+    function clamp(val, low, high) {
+        return Math.max(Math.min(high, val), low);
+    }
+
+    $("#calcCoef").addEventListener("click", calculateCoefs);
+    function calculateCoefs() {
+        var coefs = $$(".coef");
+        coefs[0].value = 0;
+        coefs[1].value = 0;
+        for (var n = 1; n < numCoefs; ++n) {
+            // Yeah I know eval is bad. I don't wanna make or load some sorta math parsing lib.
+            var realVal;
+            try {
+                realVal = clamp(eval(realEqu.value), -1e+15, 1e+15);
+            } catch(e) {
+                realVal = 0;
+            }
+            if (isNaN(realVal) || Math.abs(realVal) < 1e-10) {
+                realVal = 0;
+            }
+
+            var imagVal;
+            try {
+                imagVal = clamp(eval(imagEqu.value), -1e+15, 1e+15);
+            } catch(e) {
+                imagVal = 0;
+            }
+            if (isNaN(imagVal) || Math.abs(imagVal) < 1e-10) {
+                imagVal = 0;
+            }
+            coefs[n * 2].value = realVal;
+            coefs[n * 2 + 1].value = imagVal;
+        }
+
+        if (isPlaying) {
+            stopPlaying();
+            startPlaying();
+        }
+    }
+
+    var randomFreqInterval;
+    var randFreqBtn = $("#randfreq");
+    randFreqBtn.addEventListener("click", function() {
+        if (randFreqOn) {
+            clearInterval(randomFreqInterval);
+            randFreqBtn.innerText = "Rand Freq Off";
+        } else {
+            randomFreqInterval = setInterval(function() {
+                var newFreq = Math.floor(Math.random() * 1500);
+                setFreq(newFreq);
+            }, 250);
+            randFreqBtn.innerText = "Rand Freq On";
+        }
+        randFreqOn = !randFreqOn;
+    });
+
+    document.addEventListener("keyup", function(e) {
+        if (isPlaying && e.target.className === "coef") {
+            stopPlaying();
+            startPlaying();
+        }
+    });
+
+    function makeRow(str) {
+        var temp = document.createElement("div");
+        temp.innerHTML = "<table>" + str + "</table>";
+        return temp.children[0].children[0];
+    }
+
+    function makeCoefInputs() {
+        for (var x = 0; x < numCoefs; ++x) {
+            var htmlStr = "<tr><td>" + x + "</td>" +
+                "<td colspan='2' style='text-align: right;'><input class='coef' size='40' value='0'></td>" +
+                "<td colspan='2' style='text-align: right;'><input class='coef' size='40' value='0'></td></tr>";
+
+            $("#coefs").appendChild(makeRow(htmlStr));
+        }
+        $$(".coef")[3].value = "1";
+    }
+    makeCoefInputs();
+
+    // crap out Math's vars on the window for ease of use.
+    var objs = Object.getOwnPropertyNames(Math);
+    objs.forEach(function(mathFunc) {
+        window[mathFunc] = Math[mathFunc];
+    });
+    window.pi = Math.PI;
+</script>
+</body>
+</html>

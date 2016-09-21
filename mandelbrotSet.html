@@ -1,0 +1,370 @@
+<!DOCTYPE html>
+<html>
+<head>
+<title>Mandelbrot Set Generator</title>
+</head>
+<body>
+    <h1>Mandelbrot Set Generator</h1>
+    <h3>Works best in Google Chrome.</h3>
+    <b>Instructions:</b><br/>
+    <ul>
+    <li>Modify any of the numbers and click generate</li>
+    <li>Keep all numbers lowish, or you will have to wait a LONG time.</li>
+    <li>Click and Drag anywhere in the canvas to specify a new window area and it will automatically zoom to it.</li>
+    <li>Click in one spot to define a new center point for the canvas to move to.</li>
+    </ul>
+    <table>
+        <tr><td>
+        Canvas Width:
+        </td><td>
+        <input type="text" id="cwid" value="800" />
+        </td><td>
+        Xmin:
+        </td><td>
+        <input type="text" id="xmin" value="-2.0" />
+        </td></tr>
+        <tr><td>
+        Canvas Height:
+        </td><td>
+        <input type="text" id="chei" value="600" />
+        </td><td>
+        Xmax:
+        </td><td>
+        <input type="text" id="xmax" value="0.5" />
+        </td></tr>
+        <tr><td>
+        Iterations:
+        </td><td>
+        <input type="text" id="iter" value="50" />
+        </td><td>
+        Ymin:
+        </td><td>
+        <input type="text" id="ymin" value="-1.0" />
+        </td></tr>
+        <tr><td>
+        Cut Off Dist:
+        </td><td>
+        <input type="text" id="dist" value="2.0" />
+        </td><td>
+        Ymax:
+        </td><td>
+        <input type="text" id="ymax" value="1.0" />
+        </td></tr>
+    </table>
+    <input type="button" id="genBtn" value="Generate" />
+    <input type="button" id="resetBtn" value="Reset to Defaults" />
+    <input type="button" id="imageBtn" value="Save Image" />
+    Colors: <input type="checkbox" id="colors" value="1" checked="checked" />
+    <span id="loading"></span>
+    <br/><br/>
+    <div id="canvasDiv">
+        <canvas id="canvas" style="border: 1px solid #000000;"></canvas>
+    </div>
+    <span>If there is an image below here, right click on it to save it.</span>
+    <div id="imageDiv"></div>
+    <a name="ss"></a>
+    <script>
+        'use strict';
+
+        // My version of jquery:
+        var $$ = document.querySelectorAll.bind(document);
+        NodeList.prototype.forEach = Array.prototype.forEach;
+
+        var ui = {};
+        $$('*[id]').forEach(function(el) {
+            ui[el.id] = el;
+        });
+
+        var canvas = ui.canvas;
+        var ctx = canvas.getContext('2d');
+
+        var canvasRect = canvas.getBoundingClientRect();
+        var mousePt;
+
+        var width;
+        var height;
+        var xmin;
+        var xmax;
+        var ymin;
+        var ymax;
+        var iterations;
+        var cutOffDist;
+        var cutOffDistSquared;
+        var colors;
+
+        var xaxis;
+        var yaxis;
+        var renderStartTime;
+
+        function toDraw() {
+            ui.loading.innerHTML = 'Loading...';
+            setTimeout(draw, 10);
+        }
+
+
+        function hue2rgb(p, q, t) {
+            if (t < 0) {
+                t += 1;
+            }
+            if (t > 1) {
+                t -= 1;
+            }
+            if (t < 1 / 6) {
+                return p + (q - p) * 6 * t;
+            }
+            if (t < 1 / 2) {
+                return q;
+            }
+            if (t < 2 / 3) {
+                return p + (q - p) * (2 / 3 - t) * 6;
+            }
+            return p;
+        }
+        /**
+         * Converts an HSL color value to RGB. Conversion formula
+         * adapted from http://en.wikipedia.org/wiki/HSL_color_space.
+         * Assumes h, s, and l are contained in the set [0, 1] and
+         * returns r, g, and b in the set [0, 255].
+         *
+         * @param   Number  h       The hue
+         * @param   Number  s       The saturation
+         * @param   Number  l       The lightness
+         * @return  Array           The RGB representation
+         */
+        function hslToRgb(h, s, l) {
+            var r, g, b;
+            h = h % 1;
+            if (s === 0) {
+                r = g = b = l; // achromatic
+            } else {
+                var q = l < 0.5 ? l * (1 + s) : l + s - l * s;
+                var p = 2 * l - q;
+                r = hue2rgb(p, q, h + 1 / 3);
+                g = hue2rgb(p, q, h);
+                b = hue2rgb(p, q, h - 1 / 3);
+            }
+
+            return [~~(r * 255), ~~(g * 255), ~~(b * 255)];
+        }
+
+        function draw() {
+            renderStartTime = Date.now();
+            width = parseInt(ui.cwid.value);
+            height = parseInt(ui.chei.value);
+            xmin = parseFloat(ui.xmin.value);
+            xmax = parseFloat(ui.xmax.value);
+            ymin = parseFloat(ui.ymin.value);
+            ymax = parseFloat(ui.ymax.value);
+            iterations = parseInt(ui.iter.value);
+            cutOffDist = parseFloat(ui.dist.value);
+            cutOffDistSquared = cutOffDist * cutOffDist;
+            colors = ui.colors.checked;
+
+            xaxis = xmax - xmin;
+            yaxis = ymax - ymin;
+
+            clearCanvas();
+
+            var image = ctx.createImageData(canvas.width, canvas.height);
+            var imageData = image.data;
+            var t = 0;
+
+            for (var y = 0; y < height; ++y) {
+                for (var x = 0; x < width; ++x) {
+
+                    var x0 = x * xaxis / width + xmin;
+                    var y0 = y * yaxis / height + ymin;
+
+                    if (checkBulbBounds(x0, y0)) {
+                        //pt is in bulb 1 or 2 or 3
+                        imageData[t] = 0;
+                        imageData[t + 1] = 0;
+                        imageData[t + 2] = 0;
+                        imageData[t + 3] = 255;
+                    } else {
+                        //iterate method...
+                        var x1 = 0;
+                        var y1 = 0;
+                        var z = 0;
+
+                        while (x1 * x1 + y1 * y1 <= cutOffDistSquared && z < iterations) {
+                            var xtemp = x1 * x1 - y1 * y1 + x0;
+                            y1 = 2 * x1 * y1 + y0;
+                            x1 = xtemp;
+                            ++z;
+                        }
+
+                        if (z === iterations) {
+                            //ctx.fillStyle = '#000000';
+                            imageData[t] = 0;
+                            imageData[t + 1] = 0;
+                            imageData[t + 2] = 0;
+                            imageData[t + 3] = 255;
+                        } else if (colors) {
+                            var h = ((70 * Math.log(Math.abs(z / (x0 * y0)))) / 360);
+                            //var h = (Math.floor(x1 * 100)^Math.floor(y1 * 100)) / 360;
+                            var rgb = hslToRgb(h, 1, 0.5);
+                            imageData[t] = rgb[0];
+                            imageData[t + 1] = rgb[1];
+                            imageData[t + 2] = rgb[2];
+                            imageData[t + 3] = 255;
+                        }
+                    }
+                    //ctx.fillRect(x, y, 1, 1);
+                    t += 4;
+                }
+            }
+            ctx.putImageData(image, 0, 0);
+            var timeDiff = (Date.now() - renderStartTime) / 1000;
+            ui.loading.innerHTML = 'Render Time: ' + timeDiff + ' seconds';
+        }
+
+        function checkBulbBounds(x0, y0) {
+            //http://cosinekitty.com/mandel_orbits_analysis.html
+            if (cutOffDist < 1.5) {
+                return false;
+            }
+
+            y0 = Math.abs(y0);
+            var y02 = y0 * y0;
+
+            if (x0 >= -0.75 && x0 <= 0.375 && y0 < 0.64951905284) {
+                //check bulb 1
+                var x02 = x0 * x0;
+                var q = x02 - (x0 * 0.5) + 0.0625 + y02;
+                var q2 = q * q;
+                var bulb = q2 + q * (x0 - 0.25);
+
+                return bulb < (y02 * 0.25);
+            } else if (x0 >= -1.25 && x0 < -0.75 && y0 <= 0.25) {
+                //check bulb 2
+                var dist = (x0 + 1) * (x0 + 1) + y02;
+                return dist <= 0.0625;
+            } else if (x0 >= -1.375 && x0 < -1.25 && y0 <= 0.0625) {
+                //check bulb 3 (3 is not a perfect circle... so doesnt fit this so well)
+                var dist = (x0 + 1.3075) * (x0 + 1.3075) + y02;
+                return dist <= 0.0032;
+            }
+            return false;
+        }
+
+        function clearCanvas() {
+            var newWidth = ui.cwid.value;
+            var newHeight = ui.chei.value;
+            canvas.width = newWidth;
+            canvas.height = newHeight;
+            ctx.fillStyle = '#ffffff';
+            ctx.fillRect(0, 0, newWidth, newHeight);
+        }
+
+        function mouseDown(e) {
+            if (e.which === 3) {
+                return false;
+            }
+
+            var x = e.pageX;
+            var y = e.pageY;
+            x -= canvasRect.left;
+            y -= canvasRect.top;
+            mousePt = {x: x, y: y};
+        }
+
+        function mouseUp(e) {
+            if (e.which === 3) {
+                return false;
+            }
+            var x = e.pageX;
+            var y = e.pageY;
+            x -= canvasRect.left;
+            y -= canvasRect.top;
+
+            var pt1x = mousePt.x * xaxis / width + xmin;
+            var pt1y = mousePt.y * yaxis / height + ymin;
+            var pt2x = x * xaxis / width + xmin;
+            var pt2y = y * yaxis / height + ymin;
+
+            var xminObj = ui.xmin;
+            var xmaxObj = ui.xmax;
+            var yminObj = ui.ymin;
+            var ymaxObj = ui.ymax;
+
+            if (mousePt.x === x && mousePt.y === y) {
+                //mouse was clicked but not dragged.
+                var midPtx = (xmax + xmin) / 2;
+                var midPty = (ymax + ymin) / 2;
+                var xptDif = pt1x - midPtx;
+                var yptDif = pt1y - midPty;
+
+                xminObj.value = parseFloat(xminObj.value) + xptDif;
+                xmaxObj.value = parseFloat(xmaxObj.value) + xptDif;
+                yminObj.value = parseFloat(yminObj.value) + yptDif;
+                ymaxObj.value = parseFloat(ymaxObj.value) + yptDif;
+            } else {
+                //determine how mouse was dragged...
+                if (mousePt.x < x && mousePt.y < y) {
+                    //first pt is north west of second.
+                    xminObj.value = pt1x;
+                    xmaxObj.value = pt2x;
+                    yminObj.value = pt1y;
+                    ymaxObj.value = pt2y;
+                } else if (mousePt.x < x && mousePt.y > y) {
+                    //first pt is south west of second.
+                    xminObj.value = pt1x;
+                    xmaxObj.value = pt2x;
+                    yminObj.value = pt2y;
+                    ymaxObj.value = pt1y;
+                } else if (mousePt.x > x && mousePt.y < y) {
+                    //first pt is north east of second.
+                    xminObj.value = pt2x;
+                    xmaxObj.value = pt1x;
+                    yminObj.value = pt1y;
+                    ymaxObj.value = pt2y;
+                } else {
+                    //first pt is south east of second.
+                    xminObj.value = pt2x;
+                    xmaxObj.value = pt1x;
+                    yminObj.value = pt2y;
+                    ymaxObj.value = pt1y;
+                }
+            }
+
+            clearCanvas();
+            toDraw();
+        }
+
+        function resetDefaults() {
+            ui.cwid.value = '800';
+            ui.chei.value = '600';
+            ui.xmin.value = '-2.0';
+            ui.xmax.value = '0.5';
+            ui.ymin.value = '-1.0';
+            ui.ymax.value = '1.0';
+            ui.iter.value = '50';
+            ui.dist.value = '2.0';
+            ui.colors.checked = true;
+        }
+
+        function saveImage() {
+            var data = canvas.toDataURL('image/png');
+            var img = document.createElement('img');
+            img.src = data;
+
+            var output = ui.imageDiv;
+            while (output.hasChildNodes()) {
+                output.removeChild(output.firstChild);
+            }
+            output.appendChild(img);
+            window.location.hash = 'ss';
+        }
+
+        ui.genBtn.addEventListener('click', toDraw);
+        ui.resetBtn.addEventListener('click', resetDefaults);
+        ui.imageBtn.addEventListener('click', saveImage);
+
+        canvas.addEventListener('mouseup', mouseUp);
+        canvas.addEventListener('mousedown', mouseDown);
+
+        toDraw();
+    </script>
+</body>
+</html>

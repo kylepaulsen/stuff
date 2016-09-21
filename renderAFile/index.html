@@ -1,0 +1,189 @@
+<!DOCTYPE html>
+<html lang="en">
+    <head>
+        <title>whatever</title>
+        <meta charset="utf-8">
+        <meta name="viewport" content="width=device-width, user-scalable=no, minimum-scale=1.0, maximum-scale=1.0">
+        <style>
+            body {
+                background-color: #fff;
+                margin: 0px;
+                overflow: hidden;
+            }
+
+            #fileInput {
+                display: none;
+            }
+
+            #ui {
+                position: fixed;
+                top: 0;
+                right: 0;
+                margin: 10px;
+                z-index: 100;
+            }
+        </style>
+    </head>
+
+    <body>
+        <div id="container"></div>
+        <input type="file" id="fileInput">
+        <div id="ui">
+            <button id="openBtn">Open</button>
+        </div>
+
+        <script src="three.min.js"></script>
+
+        <script src="OrbitControls.js"></script>
+
+        <script>
+            var container;
+            var camera, controls, scene, renderer, mainObj;
+
+            var FORMAT = "XYZRGB";
+            var numberSize = 1; // x bytes per number. Must be 1, 2, or 4
+            var numberSizeToHalfValue = {
+                "1": 128,
+                "2": 32768,
+                "4": 2147483648
+            };
+            var numberSizeToMaxValue = {
+                "1": 256,
+                "2": 65536,
+                "4": 4294967296
+            };
+
+            var openBtn = document.getElementById("openBtn");
+            var fileInput = document.getElementById("fileInput");
+            openBtn.addEventListener("click", function() {
+                fileInput.click();
+            });
+
+            fileInput.addEventListener("change", function() {
+                var fileReader = new FileReader();
+                console.log("loading file...");
+                fileReader.onloadend = function(event) {
+                    var buffer;
+                    window.lol = event.target.result;
+                    if (numberSize === 1) {
+                        buffer = new Int8Array(event.target.result);
+                    } else if (numberSize === 2) {
+                        var len = Math.floor(event.target.result.byteLength / 2);
+                        buffer = new Int16Array(event.target.result, 0, len);
+                    } else {
+                        var len = Math.floor(event.target.result.byteLength / 4);
+                        buffer = new Float32Array(event.target.result, 0, len);
+                    }
+                    createObject(buffer);
+                };
+                fileReader.readAsArrayBuffer(fileInput.files[0]);
+            });
+
+            init();
+            render();
+
+            function getColor(strideObj) {
+                if (FORMAT.length < 6) {
+                    return 0xff0000;
+                }
+                var half = numberSizeToHalfValue[numberSize];
+                var max = numberSizeToMaxValue[numberSize];
+                var red = 255 * (strideObj.R + half) / max;
+                var green = 255 * (strideObj.G + half) / max;
+                var blue = 255 * (strideObj.B + half) / max;
+                return (red << 16) | (green << 8) | blue;
+            }
+
+            function createObject(buffer) {
+                console.log("creating object...");
+                var geom = new THREE.Geometry();
+                var vertexStride = FORMAT.length;
+                var faceStride = vertexStride * 3;
+                var numFaces = Math.floor(buffer.length / faceStride);
+
+                for (var x = 0; x < numFaces; ++x) {
+                    var offset = x * faceStride;
+                    var faceOffset = x * 3;
+                    var subOffset = 0;
+
+                    var verts = [];
+                    for (var vert = 0; vert < 3; ++vert) {
+                        verts[vert] = {};
+                        for (var formatIdx = 0; formatIdx < vertexStride; ++formatIdx) {
+                            var nextFormat = FORMAT[formatIdx];
+                            //verts[vert][nextFormat] = buffer[offset+subOffset];
+                            verts[vert][nextFormat] = 128 * buffer[offset+subOffset] / numberSizeToHalfValue[numberSize];
+                            ++subOffset;
+                        }
+                    }
+
+                    for (var vert = 0; vert < 3; ++vert) {
+                        geom.vertices.push(new THREE.Vector3(verts[vert].X, verts[vert].Y, verts[vert].Z));
+                    }
+
+                    var face = new THREE.Face3(faceOffset, faceOffset+1, faceOffset+2);
+                    face.vertexColors[0] = new THREE.Color(getColor(verts[0]));
+                    face.vertexColors[1] = new THREE.Color(getColor(verts[1]));
+                    face.vertexColors[2] = new THREE.Color(getColor(verts[2]));
+                    geom.faces.push(face);
+                }
+
+                if (mainObj) {
+                    scene.remove(mainObj);
+                }
+                mainObj = new THREE.Mesh(geom, new THREE.MeshBasicMaterial({vertexColors: THREE.VertexColors, side: THREE.DoubleSide, transparent: true, opacity: 0.4}));
+                geom.computeBoundingBox();
+                mainObj.position.x = -(geom.boundingBox.max.x + geom.boundingBox.min.x) / 2;
+                mainObj.position.y = -(geom.boundingBox.max.y + geom.boundingBox.min.y) / 2;
+                mainObj.position.z = -(geom.boundingBox.max.z + geom.boundingBox.min.z) / 2;
+
+                scene.add(mainObj);
+                render();
+            }
+
+            function init() {
+
+                camera = new THREE.PerspectiveCamera(60, window.innerWidth / window.innerHeight, 1, 9999);
+                camera.position.z = 500;
+
+                controls = new THREE.OrbitControls(camera);
+                controls.addEventListener('change', render);
+
+                scene = new THREE.Scene();
+                //scene.fog = new THREE.FogExp2(0xcccccc, 0.002);
+
+                // lights
+                light = new THREE.DirectionalLight(0xffffff);
+                light.position.set(1, 1, 1);
+                scene.add(light);
+
+                light = new THREE.AmbientLight(0x222222);
+                scene.add(light);
+
+
+                // renderer
+                renderer = new THREE.WebGLRenderer({antialias: false});
+                renderer.setClearColor(0xcccccc, 1);
+                renderer.setSize(window.innerWidth, window.innerHeight);
+
+                container = document.getElementById('container');
+                container.appendChild(renderer.domElement);
+
+                window.addEventListener('resize', onWindowResize, false);
+            }
+
+            function onWindowResize() {
+                camera.aspect = window.innerWidth / window.innerHeight;
+                camera.updateProjectionMatrix();
+
+                renderer.setSize(window.innerWidth, window.innerHeight);
+
+                render();
+            }
+
+            function render() {
+                renderer.render( scene, camera );
+            }
+        </script>
+    </body>
+</html>

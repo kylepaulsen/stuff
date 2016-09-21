@@ -1,0 +1,307 @@
+<html>
+<head>
+    <meta http-equiv="content-type" content="text/html; charset=UTF-8">
+    <title>Unicode Range Selector</title>
+    <style>
+    *, *:before, *:after {
+        -moz-box-sizing: border-box; -webkit-box-sizing: border-box; box-sizing: border-box;
+    }
+
+    body {
+        margin: 0 0 120px 0;
+        padding: 0;
+    }
+
+    #bottom {
+        position: fixed;
+        bottom: 0;
+        left: 0;
+        right: 0;
+        background-color: #fff;
+    }
+
+    #batch {
+        float: left;
+        padding: 20px;
+        width: 20%;
+        text-align: center;
+    }
+
+    #batch input {
+        width: 50px;
+    }
+
+    #gotoDiv {
+        float: left;
+        padding: 20px;
+        width: 10%;
+        text-align: center;
+    }
+
+    #gotoDiv input {
+        width: 50px;
+    }
+
+    #outputDiv {
+        padding: 20px 8% 0 40px;
+        float: left;
+        width: 70%;
+    }
+
+    #outputDiv input {
+        width: 100%;
+    }
+
+    .row {
+        padding: 5px 10px;
+        cursor: pointer;
+    }
+
+    .row:hover {
+        outline: 2px solid #000;
+    }
+
+    .row span {
+        padding: 0 20px;
+        border-right: 1px solid #000;
+        width: 140px;
+        display: inline-block;
+        text-align: center;
+    }
+
+    .row span:last-child {
+        border: 0;
+    }
+    </style>
+</head>
+<body>
+    <div id="rows"></div>
+    <div id="bottom">
+        <div id="batch">
+            Batch select row:<br>
+            <input id="start" value="0" maxlength="5"> to <input id="end" value="65535" maxlength="5"><br>
+            <button id="checkBtn">Select</button> <button id="uncheckBtn">DeSelect</button>
+        </div>
+        <div id="gotoDiv">
+            Goto line:<br>
+            <input id="goto" value="0" title="You can also put special characters in here to go to them."><br>
+            <button id="gotoBtn">GO</button>
+        </div>
+        <div id="outputDiv">
+            Unicode Ranges (you can also type here to edit):<br>
+            <input type="text" id="output"><br>
+            <button id="pasteBtn">Paste in allowed chars</button>
+        </div>
+    </div>
+    <script>
+    function padZeros(numStr) {
+        while (numStr.length < 4) {
+            numStr = "0" + numStr;
+        }
+        return numStr;
+    }
+
+    function get(id) {
+        return document.getElementById(id);
+    }
+
+    var output = get("output");
+    var rowsDiv = get("rows");
+    function makeRow(num) {
+        var rowDiv = document.createElement("div");
+        rowDiv.className = "row";
+        rowDiv.style.backgroundColor = "#faa";
+        rowDiv.dataset.id = num;
+        rowDiv.id = "r" + num;
+        rowDiv.innerHTML = "<span>"+padZeros(num.toString())+"</span><span>"+padZeros(num.toString(16))+"</span><span>&#"+num+";</span>";
+        rowsDiv.appendChild(rowDiv);
+    }
+
+    /*var ans = "";
+    for (var x=0; x<65536; ++x) {
+        var code = x.toString(16);
+        ans += "&amp;#x"+code + " ---> &#x" + code + " <br>";
+    }
+    document.getElementById("ans").innerHTML = ans;*/
+
+    function restLoop(func, start, end, batchLength, restPeriod) {
+        restPeriod = typeof restPeriod === "undefined" ? 0 : restPeriod;
+
+        var doBatch = function(st, ed) {
+            ed = Math.min(ed, end);
+            for (var x = st; x < ed; ++x) {
+                func(x);
+            }
+            setTimeout(function() {
+                doBatch(ed, ed+batchLength);
+            }, restPeriod);
+        };
+        doBatch(start, start+batchLength);
+    }
+
+    restLoop(makeRow, 0, 65536, 1000);
+
+    var selected = {};
+    rowsDiv.addEventListener("click", function(e) {
+        var target = e.target;
+        var id = target.dataset.id;
+        if (target.nodeName === "SPAN") {
+            target = e.target.parentNode;
+            id = target.dataset.id;
+        }
+        if (selected[id]) {
+            delete selected[id];
+            target.style.backgroundColor = "#faa";
+        } else {
+            selected[id] = id;
+            target.style.backgroundColor = "#afa";
+        }
+
+        makeOutput();
+    });
+
+    get("checkBtn").addEventListener("click", function() {
+        var st = parseInt(get("start").value);
+        var ed = parseInt(get("end").value);
+        if (!isNaN(st) && !isNaN(ed)) {
+            for (var x=st; x<=ed; ++x) {
+                get("r"+x).style.backgroundColor = "#afa";
+                selected[x] = x;
+            }
+        }
+        makeOutput();
+    });
+
+    get("uncheckBtn").addEventListener("click", function() {
+        var st = parseInt(get("start").value);
+        var ed = parseInt(get("end").value);
+        if (!isNaN(st) && !isNaN(ed)) {
+            for (var x=st; x<=ed; ++x) {
+                get("r"+x).style.backgroundColor = "#faa";
+                delete selected[x];
+            }
+        }
+        makeOutput();
+    });
+
+    get("gotoBtn").addEventListener("click", function() {
+        var line = get("goto").value;
+        if (isNaN(line) && line.length === 1) {
+            line = line.charCodeAt(0);
+        }
+        location.hash = "holdon";
+        location.hash = "r"+line;
+    });
+
+    get("pasteBtn").addEventListener("click", function() {
+        var chars = prompt("Paste in allowed characters.");
+        loadRanges(chars);
+    });
+
+    var loadRangesDebounce;
+    output.addEventListener("keyup", function() {
+        if (typeof loadRangesDebounce !== "undefined") {
+            clearTimeout(loadRangesDebounce);
+        }
+        loadRangesDebounce = setTimeout(loadRanges, 1000);
+    });
+
+    function loadRanges(chars) {
+        var list;
+        var len;
+        if (!chars) {
+            list = output.value.split("\\u");
+            list.shift();
+        } else {
+            list = chars;
+        }
+        len = list.length;
+
+        for (var x=0; x < len; ++x) {
+            var uni = list[x];
+            var start = chars ? uni.charCodeAt(0) : parseInt(uni, 16);
+            if (isNaN(start)) {
+                break;
+            }
+            if (x === 0) {
+                for (var t in selected) {
+                    get("r"+t).style.backgroundColor = "#faa";
+                    delete selected[t];
+                }
+            }
+            if (uni.length > 4) {
+                var end = parseInt(list[++x], 16);
+                if (isNaN(end)) {
+                    break;
+                }
+                for (var y = start; y <= end; ++y) {
+                    get("r"+y).style.backgroundColor = "#afa";
+                    selected[y] = y;
+                }
+            } else {
+                get("r"+start).style.backgroundColor = "#afa";
+                selected[start] = start;
+            }
+        }
+        loadRangesDebounce = undefined;
+        if (chars) {
+            makeOutput();
+        }
+    }
+
+    function makeOutput() {
+        var keys = Object.keys(selected);
+        var last = -1;
+        var sorted = true;
+        var out = "";
+        var len = keys.length;
+        var lenM1 = len - 1;
+        for (var x=0; x<len; ++x) {
+            var key = parseInt(keys[x]);
+            if (key < last) {
+                sorted = false;
+                break;
+            }
+            last = key;
+        }
+
+        if (!sorted) {
+            keys.sort();
+        }
+
+        for (x=0; x<len; ++x) {
+            var lastInRange = null;
+            var t = x;
+            while (t < lenM1 && keys[t + 1] - keys[t] === 1) {
+                lastInRange = keys[t + 1];
+                ++t;
+            }
+            if (t-x === 1) {
+                lastInRange = null;
+                t -= 1;
+            }
+            out += "\\u" + padZeros(parseInt(keys[x]).toString(16)).toUpperCase();
+            if (lastInRange !== null) {
+                out += "-\\u" + padZeros(parseInt(lastInRange).toString(16)).toUpperCase();;
+            }
+            x = t;
+        }
+
+        output.value = out;
+    }
+
+    function invert() {
+        for (var x = 0; x < 65536; ++x) {
+            if (selected[x] !== undefined) {
+                delete selected[x];
+                get("r"+x).style.backgroundColor = "#faa";
+            } else {
+                selected[x] = x;
+                get("r"+x).style.backgroundColor = "#afa";
+            }
+        }
+        makeOutput();
+    }
+    </script>
+</body>
+</html>

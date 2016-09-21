@@ -1,0 +1,97 @@
+<html>
+  <head>
+    <script type="text/javascript" src="https://www.google.com/jsapi"></script>
+    <script src="https://ajax.googleapis.com/ajax/libs/jquery/1.7.1/jquery.min.js"></script>
+    <script type="text/javascript">
+      google.load("visualization", "1", {packages:["corechart"]});
+      google.setOnLoadCallback(init);
+      
+      function init(){
+        $("#graph_btn").click(drawChart);
+        drawChart();
+      }
+      
+      function drawChart() {
+        var data = new google.visualization.DataTable();
+        var data_str = jQuery.trim($("#data").val().replace(/\n/g, ","));
+        while(data_str[data_str.length-1] == ','){
+          data_str = data_str.substr(0, data_str.length-1);
+        }
+        while(data_str[0] == ','){
+          data_str = data_str.substr(1);
+        }
+        var g = jQuery.parseJSON("["+data_str+"]");
+        
+        data.addColumn("number", "x-axis");
+        for(var p=0; p<g.length; ++p){
+          data.addColumn("number", g[p].name);
+        }
+        
+        var xmin = parseFloat($("#xmin").val());
+        var xmax = parseFloat($("#xmax").val());
+        var step = parseFloat($("#step").val());
+        
+        var decimals = 0;
+        var temp = step+"";
+        var dot = temp.indexOf(".");
+        if(dot != -1){
+          decimals = temp.length - dot - 1;
+        }
+        var power = Math.pow(10, decimals);
+        
+        var rows = Array();
+        
+        var i = 0;
+        for(var x=xmin; x<=xmax; x+=step){
+          var temp = Array();
+          var maybe_real_answer;
+          x = Math.round(x*power)/power;
+          temp[0] = x;
+          for(var p=0; p<g.length; ++p){
+            temp[p+1] = eval(g[p].equation);
+            if(temp[p+1] === undefined){
+              temp[p+1] = Infinity;
+            }
+            maybe_real_answer = parseFloat(temp[p+1].toFixed(10));
+            if(Math.abs(temp[p+1] - maybe_real_answer) < 0.000000000001){
+              temp[p+1] = maybe_real_answer;
+            }
+          }
+          rows[i] = temp;
+          ++i
+        }
+        
+        data.addRows(rows);
+
+        var options = {title: $("#title").val()};
+
+        var chart = new google.visualization.LineChart(document.getElementById('chart_div'));
+        chart.draw(data, options);
+      }
+    </script>
+  </head>
+  <body>
+    <div id="chart_div" style="width: 900px; height: 500px;"></div><br/>
+    Graph Title:<br/>
+    <input type="text" id="title" value="graph title" /><br/>
+    Equations:<br/>
+    <textarea id="data" rows="8" cols="80">{"name" : "i dont know", "equation" : "if(x<5){x*50+100}else{(x-4)*-100+300}"}
+{"name" : "something", "equation" : "50/(x)"}
+{"name" : "whatever", "equation" : "Math.sin(x)*300"}</textarea><br/>
+    <div style="float: left; margin-right: 10px;">
+      Xmin:<br>
+      <input id="xmin" value="-10" type="text">
+    </div>
+    <div style="float: left; margin-right: 10px;">
+      Xmax:<br>
+      <input id="xmax" value="10" type="text">
+    </div>
+    <div style="float: left;">
+      x step:<br>
+      <input id="step" value="0.1" type="text">
+    </div>
+    <div style="clear:both;">
+      <input value="Graph me" id="graph_btn" type="button">
+    </div>
+  </body>
+</html>

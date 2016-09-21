@@ -1,0 +1,139 @@
+<html>
+<body>
+Select and copy a section out of a spreadsheet/table that looks like this (it will give you TSV format):<br>
+<table border="1" cellpadding="5">
+<tr><td>
+Key
+</td><td>
+US
+</td><td>
+ES
+</td></tr>
+<tr><td>
+helloLabel
+</td><td>
+Hello there!
+</td><td>
+Hola!
+</td></tr>
+<tr><td>
+goodbyeLabel
+</td><td>
+See you later!
+</td><td>
+Nos vemos mas tarde!
+</td></tr>
+<table>You can even try to copy this table! ^<br><br>
+Section Prefix: <input id="prefix" /><br>
+Translation Table (TSV Format): <textarea id="trans"></textarea><br><br>
+<div id="ans"></div>
+
+<script type="text/javascript">
+    function get(id) {
+        return document.getElementById(id);
+    }
+
+    function convertToUnicodeStr(str) {
+        var len = str.length;
+        var ans = "";
+        for (var x = 0; x < len; ++x) {
+            var code = str.charCodeAt(x);
+            if (code < 32 || code > 126) {
+                var hex = code.toString(16).toUpperCase();
+                while (hex.length < 4) {
+                    hex = "0" + hex;
+                }
+                ans += "\\u" + hex;
+            } else {
+                ans += str.charAt(x);
+            }
+        }
+        return ans;
+    }
+
+    var prefixEl = get("prefix");
+    var transEl = get("trans");
+    var ansEl = get("ans");
+
+    function indexOf(str, regex, startpos) {
+        var index = str.substring(startpos || 0).search(regex);
+        return (index >= 0) ? (index + (startpos || 0)) : index;
+    }
+
+    function cutOutChar(str, idx) {
+        return str.substring(0, idx) + str.substring(idx + 1);
+    }
+
+    function removeExtraReturns(str) {
+        var inStr = false;
+        var reg = /[\"\n]/g;
+        var idx = 0;
+        var inStrStartIdx;
+        while ((idx = indexOf(str, reg, idx)) > -1) {
+            var ch = str.charAt(idx);
+            if (ch === '"' && !inStr) {
+                inStr = true;
+                inStrStartIdx = idx;
+                ++idx;
+            } else if (ch === '"' && inStr) {
+                if (str.charAt(idx + 1) !== '"') {
+                    inStr = false;
+                    str = cutOutChar(str, inStrStartIdx);
+                    str = cutOutChar(str, idx - 1);
+                    idx -= 2;
+                } else {
+                    ++idx;
+                }
+            } else if (ch === "\n" && inStr) {
+                str = cutOutChar(str, idx);
+            } else {
+                ++idx;
+            }
+        }
+        return str;
+    }
+
+    function doConversion() {
+        var allTranslations = removeExtraReturns(transEl.value);
+        var lines = allTranslations.split("\n");
+        var transMat = [];
+        var numRegions;
+        var key;
+        var x, y;
+        for (x = 0; x < lines.length; ++x) {
+            var line = lines[x];
+            if (line.length > 0) {
+                var trans = line.split("\t");
+                if (numRegions && numRegions !== trans.length) {
+                    ansEl.innerHTML = "Error! Incomplete table or number of translations per key don't match.";
+                    return;
+                }
+                numRegions = trans.length;
+                transMat.push(trans);
+            }
+        }
+
+        var ans = "";
+        for (x = 1; x < numRegions; ++x) {
+            var textareaStr = "";
+            ans += "<div><h2>" + transMat[0][x] + "</h2><textarea cols='80' rows='8' onClick='this.select()'>";
+            textareaStr = prefixEl.value + "\n";
+            for (y = 1; y < transMat.length; ++y) {
+                textareaStr += transMat[y][0] + "=" + convertToUnicodeStr(transMat[y][x]).trim() + "\n";
+            }
+            ans += textareaStr.trim() + "</textarea></div>";
+        }
+
+        if (ans === "") {
+            ans = "Didn't convert anything. Expecting TSV format. Didn't find any tab characters probably.";
+        }
+
+        ansEl.innerHTML = ans;
+    }
+
+    transEl.addEventListener("keyup", doConversion);
+    prefixEl.addEventListener("keyup", doConversion);
+</script>
+</body>
+</html>
+

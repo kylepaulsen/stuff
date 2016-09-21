@@ -1,0 +1,244 @@
+<html>
+<head>
+<title>NetPBM Viewer</title>
+</head>
+<body>
+<h2>NetPBM Viewer</h2>
+<p>Open a .pbm, .pgm or .ppm file here. To see more about the NetPBM format <a href="http://en.wikipedia.org/wiki/Netpbm_format" target="_blank">see here</a>.<br><br>
+<input type="file" id="file">
+<br><br>
+<canvas id="canvas"></canvas>
+<br><br>
+<p>Alternatively, enter in the image data in this textarea:</p>
+<textarea id="dataEntry" rows="14" cols="80">P1
+36 11
+1 0 0 0 1 0 0 1 1 1 1 1 0 0 1 0 0 0 0 0 0 1 0 0 0 0 0 0 1 1 1 1 1 0 0 1
+1 0 0 0 1 0 0 1 0 0 0 0 0 0 1 0 0 0 0 0 0 1 0 0 0 0 0 0 1 0 0 0 1 0 0 1
+1 0 0 0 1 0 0 1 0 0 0 0 0 0 1 0 0 0 0 0 0 1 0 0 0 0 0 0 1 0 0 0 1 0 0 1
+1 0 0 0 1 0 0 1 0 0 0 0 0 0 1 0 0 0 0 0 0 1 0 0 0 0 0 0 1 0 0 0 1 0 0 1
+1 0 0 0 1 0 0 1 0 0 0 0 0 0 1 0 0 0 0 0 0 1 0 0 0 0 0 0 1 0 0 0 1 0 0 1
+1 1 1 1 1 0 0 1 1 1 1 1 0 0 1 0 0 0 0 0 0 1 0 0 0 0 0 0 1 0 0 0 1 0 0 1
+1 0 0 0 1 0 0 1 0 0 0 0 0 0 1 0 0 0 0 0 0 1 0 0 0 0 0 0 1 0 0 0 1 0 0 1
+1 0 0 0 1 0 0 1 0 0 0 0 0 0 1 0 0 0 0 0 0 1 0 0 0 0 0 0 1 0 0 0 1 0 0 0
+1 0 0 0 1 0 0 1 0 0 0 0 0 0 1 0 0 0 0 0 0 1 0 0 0 0 0 0 1 0 0 0 1 0 0 0
+1 0 0 0 1 0 0 1 0 0 0 0 0 0 1 0 0 0 0 0 0 1 0 0 0 0 0 0 1 0 0 0 1 0 0 1
+1 0 0 0 1 0 0 1 1 1 1 1 0 0 1 1 1 1 1 0 0 1 1 1 1 1 0 0 1 1 1 1 1 0 0 1</textarea><br><br>
+<button id="dataEntryBtn">Render</button> <button id="changeSizeBtn">Change Canvas Size</button><br><br>
+<canvas id="canvas2"></canvas>
+
+<script>
+function NetPBM() {
+    function toBin(x) {
+        var bin = x.toString(2);
+        var pad = 8 - bin.length;
+        var padZerosArr = [];
+        padZerosArr[pad] = "";
+        return padZerosArr.join("0") + bin;
+    }
+
+    function dataParser(buffer) {
+        var data = new Uint8Array(buffer);
+        var byteOffset = 0;
+        var bitOffset = 0;
+        var bitStr;
+        var inComment = false;
+        var endChars = " \n\r\t#";
+
+        var getByte = function() {
+            return data[byteOffset++];
+        };
+
+        var getBit = function() {
+            var ans = 0;
+            if (bitOffset === 0) {
+                var b = getByte();
+                if (b === undefined) {
+                    // EOF?
+                    return b;
+                }
+                bitStr = toBin(b);
+            }
+            if (bitStr.charAt(bitOffset) === "1") {
+                ans = 1;
+            }
+            bitOffset = (bitOffset + 1) % 8;
+            return ans;
+        };
+
+        var getValue = function() {
+            var ans = "";
+            var nextByte;
+            var nextChar;
+            while (true) {
+                nextByte = data[byteOffset];
+                nextChar = String.fromCharCode(nextByte);
+                ++byteOffset;
+                if (nextByte === undefined) {
+                    // EOF?
+                    return ans || undefined;
+                }
+                if (endChars.indexOf(nextChar) > -1) {
+                    if (nextChar === "#") {
+                        inComment = true;
+                    } else if (nextChar === "\n") {
+                        inComment = false;
+                    }
+                    if (ans.length) {
+                        return ans;
+                    }
+                } else {
+                    if (!inComment) {
+                        ans += nextChar;
+                    }
+                }
+            }
+        };
+
+        var setByteOffset = function(x) {
+            byteOffset = x;
+        };
+
+        var setBitOffset = function(x) {
+            bitOffset = x;
+        };
+
+        return {
+            getByte: getByte,
+            getBit: getBit,
+            getValue: getValue,
+            setByteOffset: setByteOffset,
+            setBitOffset: setBitOffset
+        };
+    }
+
+    function getHeaderData(parser) {
+        var type = parser.getValue().toLowerCase();
+        var data = {};
+        if (type.length !== 2 || type.charAt(0) !== "p") {
+            console.error("Invalid File - Can't find P type as first value.");
+            return null;
+        }
+        data.type = parseInt(type.charAt(1), 10);
+        data.width = parseInt(parser.getValue(), 10);
+        data.height = parseInt(parser.getValue(), 10);
+        if (data.type !== 1 && data.type !== 4) {
+            data.maxValue = parseInt(parser.getValue(), 10);
+            if (isNaN(data.maxValue)) {
+                console.error("Invalid File - Can't parse max value.");
+                return null;
+            }
+        }
+        return data;
+    }
+
+    function putPixelData(pixelData, index, val) {
+        pixelData[index] = val;
+        pixelData[index + 1] = val;
+        pixelData[index + 2] = val;
+        pixelData[index + 3] = 255;
+    }
+
+    var renderType = {
+        "1": function(idx, parser, pixelData, headerData) {
+            var val = 255 * Math.abs(parseInt(parser.getValue(), 10) - 1);
+            putPixelData(pixelData, idx, val);
+        },
+        "2": function(idx, parser, pixelData, headerData) {
+            var val = 255 * parseInt(parser.getValue(), 10) / headerData.maxValue;
+            putPixelData(pixelData, idx, val);
+        },
+        "3": function(idx, parser, pixelData, headerData) {
+            var r = 255 * parseInt(parser.getValue(), 10) / headerData.maxValue;
+            var g = 255 * parseInt(parser.getValue(), 10) / headerData.maxValue;
+            var b = 255 * parseInt(parser.getValue(), 10) / headerData.maxValue;
+            pixelData[idx] = r;
+            pixelData[idx + 1] = g;
+            pixelData[idx + 2] = b;
+            pixelData[idx + 3] = 255;
+        },
+        "4": function(idx, parser, pixelData, headerData) {
+            var val = 255 * Math.abs(parser.getBit() - 1);
+            if (idx > 0 && idx % (headerData.width * 4) === 0) {
+                parser.setBitOffset(0);
+            }
+            putPixelData(pixelData, idx, val);
+        },
+        "5": function(idx, parser, pixelData, headerData) {
+            var val = 255 * parser.getByte() / headerData.maxValue;
+            putPixelData(pixelData, idx, val);
+        },
+        "6": function(idx, parser, pixelData, headerData) {
+            var r = 255 * parser.getByte() / headerData.maxValue;
+            var g = 255 * parser.getByte() / headerData.maxValue;
+            var b = 255 * parser.getByte() / headerData.maxValue;
+            pixelData[idx] = r;
+            pixelData[idx + 1] = g;
+            pixelData[idx + 2] = b;
+            pixelData[idx + 3] = 255;
+        }
+    };
+
+    function render(buffer, canvas) {
+        var parser = dataParser(buffer);
+        var headerData = getHeaderData(parser);
+        var type = headerData.type;
+        canvas.width = headerData.width;
+        canvas.height = headerData.height;
+        var ctx = canvas.getContext("2d");
+        var imageData = ctx.getImageData(0, 0, canvas.width, canvas.height);
+        var pixelData = imageData.data;
+        var totalPixels = canvas.width * canvas.height;
+        var renderFunc = renderType[type];
+
+        for (var x = 0; x < totalPixels; ++x) {
+            renderFunc(x * 4, parser, pixelData, headerData);
+        }
+        ctx.putImageData(imageData, 0, 0);
+    }
+
+    return {
+        render: render
+    };
+}
+
+
+var get = document.getElementById.bind(document);
+var fileInput = get("file");
+var netPBM = NetPBM();
+
+fileInput.addEventListener("click", function() {
+    fileInput.value = "";
+});
+
+fileInput.addEventListener("change", function() {
+    var fileReader = new FileReader();
+    console.log("loading file...");
+    fileReader.onloadend = function(event) {
+        netPBM.render(event.target.result, get("canvas"));
+    };
+    fileReader.readAsArrayBuffer(fileInput.files[0]);
+});
+
+function str2ab(str) {
+    var buf = new ArrayBuffer(str.length);
+    var bufView = new Uint8Array(buf);
+    for (var i = 0, strLen=str.length; i < strLen; i++) {
+        bufView[i] = str.charCodeAt(i);
+    }
+    return buf;
+}
+
+get("dataEntryBtn").addEventListener("click", function() {
+    netPBM.render(str2ab(get("dataEntry").value), get("canvas2"));
+});
+
+var mults = [1, 2, 4, 8];
+var multIdx = 1;
+get("changeSizeBtn").addEventListener("click", function() {
+    var canvas = get("canvas2");
+    canvas.style.width = canvas.width * mults[multIdx++];
+    multIdx = multIdx % mults.length;
+});
+</script>
+</body>
+</html>

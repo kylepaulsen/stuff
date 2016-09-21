@@ -1,0 +1,146 @@
+<!doctype html>
+<html>
+<head>
+<title>Work Time Tracking</title>
+<link rel="icon" href="data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAABAAAAAQCAYAAAAf8/9hAAADXElEQVQ4jWWTy09cdRzFP3deMNN5d3hlxg6vCpUKlhBaqsWWtlhNFIxJu9DG2F0XxoVbdeWfYIIxMRotSV2YEm1JiyysVNpipBVagZbnADMwMAwwlzt37uN3XZWIntU5yTnffDcfif/o7Ut3Sa75jtvt3jOlJe64sGBlVV0wTWWwIqIOX//uyJ6+9O/QcX6sORiK9jQ1hFp1XSWzsYMQEl6vl3zBxaPJzRGbtHn51x+qR59t7M9MQ/uN7lOvtl53SNuVD/+8Rqx0lprYU/yex0jWOk+mk5SXxaJCCl00Xa/8nV26Mrn7QceFieYjjdVD83OPPNXRB5w9tZ/T7edIr82SWlml6cWX2ZZlvvjmCWNTdaxlixVDS56482PtqP3190ZxueM3i5zbsej+YT7/pIu7w0MUuU2CIT9IAp/Xh8sJbS0BEslVckrEObtQaGs8+v6XtuRa0bH6Wl9jYm6Ijz9qx7QM3nzrLFev/ozNAeUVUTRTpmBuoRk5LnSbuItVyiNGYzpjP2ZD8nWahkZrM7jdAl3kcBS7OHHyBXqvfI8u1tGtDKqeZCo9ye3UMk0NywT9EnlFdDoCfk98W9aojuaZmX2I37+PULicltZDfPv1T/zx1wxl57vQdRP3Tpo6e4agr4iiosO4HMm4QzckDNOGhYlaWMelKxjCjiRpzCemQVh89ukbCN3JXKLA5qaFLPJYQkWIAo6NbH5BqgkgqweoqskjLBNNz6EX8kjAV70fIudkdEPHF3ThDYR5PFlBbmsJVXMu2CwhD2SyEhPTdWxsZ1HUDDl5jf4bd2g/9Tw7OzKKlkMzFISpUVBhZfUgicQMnmIGbOGAfm96LjOmGRH6+g+jKDKqqhCOeDjaVsfTiSWEYSKEBcJiOdXO+Pgi6Q33WDiwcc++NNXDc/WXRrY3cxdNUessFIKUl2SJRAIoOxqpVI5Y7ACm4WUpdZLf78e4dbNPicWrukb6z6V2WYi+dK07HC7pPVR/0FNVuY+6mgQBbwqtkMfmrGY5Fef+yDS/3R5UJEf43eT4B33/g6mpc7Q5nc70lIZ2WsvLQvgDpViWTnZ9nsTiIpkt/0i8Mnr5wUDHLkx7DgC0vPYLWTl4PK/kzzhsW3GwMIRvweNxDIa96eGRW+/s6f8Dr3aaC92IEG8AAAAASUVORK5CYII=">
+<script src="https://code.jquery.com/jquery-2.1.3.min.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/moment.js/2.10.1/moment.min.js"></script>
+<style>
+    table {
+        margin-bottom: 50px;
+    }
+</style>
+</head>
+<script type="text/template" id="weekTemplate">
+    <table class="week">
+        <tr data-rowid="{{row}}">
+            <td width="200">{{week}}</td>
+            <td>Mon:<br><input type="text"><br><span class="dayTotal"><span></td>
+            <td>Tue:<br><input type="text"><br><span class="dayTotal"><span></td>
+            <td>Wed:<br><input type="text"><br><span class="dayTotal"><span></td>
+            <td>Thu:<br><input type="text"><br><span class="dayTotal"><span></td>
+            <td>Fri:<br><input type="text"><br><span class="dayTotal"><span></td>
+            <td>Sat:<br><input type="text"><br><span class="dayTotal"><span></td>
+            <td>Sun:<br><input type="text"><br><span class="dayTotal"><span></td>
+            <td>Total: <span class="total"></span></td>
+        </tr>
+    </table>
+</script>
+<body>
+    <script>
+
+    var data = JSON.parse(localStorage.data || '{}');
+
+    function debounce(fn, amt) {
+        var timeout;
+        return function() {
+            var args = arguments;
+            if (timeout) {
+                clearTimeout(timeout);
+            }
+            timeout = setTimeout(function() {
+                fn.apply(null, args);
+            }, amt);
+        };
+    }
+
+    function populateOrSave(justPopulate) {
+        var $rows = $('tr');
+        var t = $rows.length;
+        while (t-- > 0) {
+            var week = $rows.eq(t);
+            var rowId = week.data('rowid');
+            var weekData = data[rowId] || [];
+            var inputs = week.find('input');
+            var values = [];
+            var weekTotal = 0;
+            for (var x = 0; x < inputs.length; ++x) {
+                var dayData;
+                if (justPopulate === true) {
+                    dayData = weekData[x];
+                } else {
+                    dayData = inputs[x].value;
+                }
+                var timeDiff = getTimeDiff(dayData);
+                weekTotal += timeDiff;
+                inputs.eq(x).parent().find('.dayTotal').text(timeDiff.toFixed(2));
+                if (justPopulate === true) {
+                    inputs[x].value = dayData || '';
+                }
+                values.push(inputs[x].value);
+            }
+
+            if (justPopulate !== true) {
+                data[rowId] = values;
+            }
+
+            week.find('.total').text(weekTotal.toFixed(2));
+        }
+
+        if (justPopulate !== true) {
+            localStorage.data = JSON.stringify(data);
+        }
+    }
+
+    var updateFunc = debounce(populateOrSave, 1000);
+
+    function getDateRange(today) {
+        return moment(today).startOf('week').add(1, 'days').format('MMM Do') + ' - ' + moment(today).add(7, 'days').startOf('week').format('MMM Do');
+    }
+
+    function getTimeDiff(time) {
+        if (!time) {
+            return 0;
+        }
+        time = time.replace(/ /g, '');
+        var startEnd = time.split('-');
+        if (startEnd.length !== 2) {
+            return 0;
+        }
+        var start = startEnd[0].split(':');
+        var end = startEnd[1].split(':');
+        if (start.length !== 2 || end.length !== 2) {
+            start = start[0];
+            end = end[0];
+            var startAlt = parseInt(start);
+            var endAlt = parseInt(end);
+            if (isNaN(startAlt) || isNaN(endAlt) || start.length < 3 || end.length < 3) {
+                return 0;
+            } else {
+                start = [start.substring(0, start.length - 2), start.slice(-2)];
+                end = [end.substring(0, end.length - 2), end.slice(-2)];
+            }
+        }
+        start = parseInt(start[0]) + (parseInt(start[1]) / 60);
+        end = parseInt(end[0]) + (parseInt(end[1]) / 60);
+        var ans = (end - start);
+        if (isNaN(ans)) {
+            return 0;
+        }
+        return ans;
+    }
+
+    function renderWeek(weekText, rowId) {
+        var weekTemplate = $('#weekTemplate').text();
+
+        weekTemplate = weekTemplate.replace('{{row}}', rowId);
+        weekTemplate = weekTemplate.replace('{{week}}', weekText);
+
+        $('body').append($(weekTemplate));
+    }
+
+    var numberOfWeeksToShow = 5;
+    for (var x = 0; x < numberOfWeeksToShow; ++x) {
+        var aWeek = moment().subtract(x * 7, 'days').startOf('week');
+        renderWeek(getDateRange(aWeek), aWeek.format('DDMMYY'));
+    }
+
+    populateOrSave(true);
+
+    $('body').on('keydown', updateFunc);
+
+    // try to delete the week that is older than the oldest showing.
+    delete data[moment().subtract(numberOfWeeksToShow * 7, 'days').startOf('week').format('DDMMYY')];
+    </script>
+</body>
+</html>

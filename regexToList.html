@@ -1,0 +1,46 @@
+<html>
+<head>
+<title>Regex -> List</title>
+</head>
+<body style="margin: 20px;">
+This tool will convert Regular Expression whitelists/blacklists into a list of readable characters.<br>
+Enter RegExp below and then click check. Example: /[a-z0-9]/i<br><br>
+<input id="regex"> <button id="check">Check</button><br>
+<div id="out" style="margin-top: 20px;"></div>
+
+<script>
+var regexIn = document.getElementById("regex");
+var checkBtn = document.getElementById("check");
+
+function makeRegexFromString(str) {
+    var parts = str.split("/");
+    if (parts.length < 3) {
+        throw new Error("invalid regex format");
+    }
+    var flags = parts.pop();
+    return new RegExp(parts.join("/").substring(1), flags);
+}
+
+checkBtn.addEventListener("click", function() {
+    var ans = "";
+    try {
+        var regex = makeRegexFromString(regexIn.value);
+        for (var x = 0; x < 65536; ++x) {
+            var cha = String.fromCharCode(x);
+            if (regex.test(cha)) {
+                ans += cha;
+            }
+        }
+        if (ans.length === 0) {
+            ans += "No characters passed. Maybe the regex is checking for consecutive characters. If so, it can't be expressed as a character list."
+        } else {
+            ans = "Passing Characters:<br>" + ans;
+        }
+    } catch(e) {
+        ans = "Error parsing regex string. Don't forget the start and end forward slashes: /[some characters]/";
+    }
+    document.getElementById("out").innerHTML = ans;
+});
+</script>
+</body>
+</html>

@@ -1,0 +1,131 @@
+* {
+    box-sizing: border-box;
+}
+
+html, body, #all {
+    width: 100%;
+    height: 100%;
+    margin: 0;
+    padding: 0;
+    overflow: hidden;
+}
+
+body {
+    background: url('bg.png');
+}
+
+#overlay {
+    position: absolute;
+    top: 0;
+    left: 0;
+    z-index: 9999;
+    background: rgba(0, 0, 0, 0.8);
+    width: 100%;
+    height: 100%;
+    color: #fff;
+    font-size: 50px;
+    font-family: arial;
+    text-align: center;
+    padding-top: 200px;
+    display: none;
+}
+
+#all {
+    display: flex;
+    flex-direction: column;
+}
+
+#topBar {
+    padding: 10px;
+    border-bottom: 2px solid #000;
+    overflow: hidden;
+    background: #fff;
+    flex: 0 0 50px;
+}
+
+#mid {
+    flex: 1 1;
+    position: relative;
+    overflow: scroll;
+}
+
+#bottomBar {
+    padding: 10px;
+    border-top: 2px solid #000;
+    overflow: hidden;
+    background: #fff;
+    flex: 0 0 50px;
+}
+
+#canvas {
+    image-rendering: pixelated;
+    display: block;
+}
+
+#cropCanvas {
+    image-rendering: pixelated;
+    display: none;
+    position: absolute;
+    top: 0;
+    left: 0;
+}
+
+#gridCanvas {
+    image-rendering: pixelated;
+    display: none;
+    position: absolute;
+    top: 0;
+    left: 0;
+}
+
+#openFile, #openURL {
+    display: block;
+    width: 200px;
+    height: 50px;
+    margin: 10px;
+}
+
+#cropMenu {
+    display: none;
+}
+
+#cropMenu div {
+    float: right;
+}
+
+#cropMenu input {
+    width: 60px;
+}
+
+#transparentMenu {
+    display: none;
+}
+
+#transparentMenu div {
+    float: right;
+}
+
+#zoomSpan {
+    margin-right: 40px;
+}
+
+#showGridSpan {
+    margin-right: 40px;
+}
+
+#zoom {
+    width: 60px;
+}
+
+#zoomRange {
+    width: 400px;
+}
+
+.noselect {
+    -webkit-touch-callout: none; /* iOS Safari */
+    -webkit-user-select: none;   /* Chrome/Safari/Opera */
+    -khtml-user-select: none;    /* Konqueror */
+    -moz-user-select: none;      /* Firefox */
+    -ms-user-select: none;       /* Internet Explorer/Edge */
+    user-select: none;
+}

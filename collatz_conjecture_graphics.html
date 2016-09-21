@@ -1,0 +1,134 @@
+<html>
+<head>
+<script type="text/javascript">
+//Graph vars:
+var xmin = -320;
+var xmax = 320;
+var ymin = -240;
+var ymax = 240;
+
+//These vars are used to help calculate coordinates
+var xaxis = xmax - xmin;
+var yaxis = ymax - ymin;
+
+function go(){
+	//canvas drawing set up stuff
+	var canvas = document.getElementById("canvas");
+	var width = canvas.width;
+	var height = canvas.height;
+	var ctx = canvas.getContext('2d');
+	
+	//for every pixel in the canvas:
+	for(var y=0; y<height; ++y){
+		for(var x=0; x<width; ++x){
+			
+			//figure out the graph coordinates from the pixels.
+			var x0 = Math.floor(x * xaxis / width + xmin);
+			var y0 = Math.floor(y * yaxis / height + ymin);
+			
+			//iters functions here: works best when a positive int.
+			
+			var iters = Math.abs(Math.floor(x0));
+			//var iters = Math.abs(Math.floor(100*Math.sin(x0*y0)));
+			//var iters = Math.abs(Math.floor(100*Math.sin(x0*y0/Math.log(x0*x0+1))));
+			//var iters = Math.abs(Math.floor(1*Math.log(Math.abs(x0*x0*y0+1))));
+			//var iters = Math.abs(Math.floor(10*Math.log(Math.abs(y0*y0/(x0+0.1)+1))));
+						
+						
+			//functions for start number for Collatz conjecture here:
+			//again works best when positive int.
+			
+			//var startNum = Math.abs(Math.floor(y0));
+			var startNum = Math.abs(Math.floor(10000*y0/(x0*x0)));
+			//var startNum = Math.abs(Math.floor(10000*x0/(y0*y0)));
+			//var startNum = Math.abs(Math.floor(2*Math.log(Math.abs(x0*x0*y0*y0)+1)));
+			//var startNum = Math.abs(Math.floor(50*Math.sin(x0*x0-y0*y0)));
+			
+			var num = startNum;
+			
+			///*
+			//apply Collatz conjecture with an iteration limit.
+			while(num != 1 && iters > 0){
+				if(num % 2 == 0){
+					num /= 2;
+				}else{
+					num = num * 3 + 1;
+				}
+				
+				--iters;
+			}
+			//*/
+			/*
+			//apply modified Collatz conjecture with an iteration limit.
+			while(num != 1 && iters > 0){
+				if(num % 2 == 0){
+					num /= 4;
+					num = Math.ceil(num);
+				}else{
+					num = num * 5 + 1;
+				}
+				
+				--iters;
+			}
+			//*/
+			
+			if(iters > 0){//made it to 1 before iters ran out.
+				
+				///*
+				//color functions go here: These also work best when positive int
+				
+				//color = Math.abs(Math.floor(Math.log(iters)*100)) % 512;
+				//color = Math.abs(Math.floor(Math.log(iters+Math.abs(y0*y0+x0*x0))*100)) % 512;
+				color = 0;
+				
+				var red = Math.floor(color/64);
+				color -= (red*64);
+				var green = Math.floor(color/8);
+				color -= (green*8);
+				var blue = 32 * color;
+				red *= 32;
+				green *= 32;
+				
+				ctx.fillStyle = 'rgb('+red+','+green+','+blue+')';
+				//*/
+				
+				ctx.fillRect(x,y,1,1);
+			}else{//didnt make it to 1 yet.
+			
+				///*
+				//color functions go here: These also work best when positive int
+				
+				//color = Math.abs(Math.floor(num/Math.sin(x0*y0)*startNum)) % 512;
+				//color = Math.abs(Math.floor(100*startNum/x0*y0/num)) % 512;
+				//color = Math.abs(Math.floor(num*startNum/x0)) % 512;
+				color = Math.abs(Math.floor(Math.log(startNum+Math.abs(x0))*100)) % 512;
+				//color = Math.abs(Math.floor(Math.log(num+Math.abs(x0))*100)) % 512;
+				//color = 0;
+				
+				//figure out the color from the returned color number.
+				var red = Math.floor(color/64);
+				color -= (red*64);
+				var green = Math.floor(color/8);
+				color -= (green*8);
+				var blue = 32 * color;
+				red *= 32;
+				green *= 32;
+				
+				ctx.fillStyle = 'rgb('+red+','+green+','+blue+')';
+				ctx.fillRect(x,y,1,1);
+				//*/
+			}
+		}
+	}
+}
+</script>
+</head>
+<body onload="go();">
+<h2>Graphics with the Collatz conjecture</h2>
+<canvas id="canvas" width="600" height="450" style="border: 1px solid #000000;"></canvas>
+<br/><br/>
+Download this page by doing a file -> save as and fool around with the functions.<br/>
+You kinda need an editor with syntax hi-lighting like <a href="http://notepad-plus-plus.org/">Notepad++</a>, otherwise this will be kinda hard to read.<br/>
+Also, if you aren't using google chrome already, please use it. It is the <u>BEST and FASTEST</u> browser to run javascript.<br/>
+</body>
+</html>

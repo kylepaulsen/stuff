@@ -1,0 +1,33 @@
+<!doctype html>
+<html>
+<head>
+    <title>Cave Gen Test</title>
+</head>
+<body>
+    Canvas Width: <input id="width" value="800">&nbsp;&nbsp;
+    Canvas Height: <input id="height" value="600"><br>
+    Min Treasures: <input id="minTres" value="5">&nbsp;&nbsp;
+    Max Treasures: <input id="maxTres" value="9"><br>
+    Tile Size: <input id="tileSize" value="8"><br>
+    Seed: <input id="seed" value="1"> Random: <input id="random" type="checkbox"><br>
+
+    <button id="genBtn">Generate</button><br>
+    <canvas id="canvas" style="border: 1px solid #000000;"></canvas>
+
+    <script src="seedRandom.js"></script>
+    <script src="perlinNoise.js"></script>
+
+    <script>
+        'use strict';
+        const app = {};
+    </script>
+    <script src="util.js"></script>
+    <script src="queue.js"></script>
+    <script src="distanceGrid.js"></script>
+    <script src="treasures.js"></script>
+    <script src="gen.js"></script>
+
+
+    <script src="main.js"></script>
+</body>
+</html>

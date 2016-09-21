@@ -1,0 +1,192 @@
+<html>
+<head>
+    <title>My Mortgage Calc</title>
+    <style>
+    .money {
+        font-weight: bold;
+    }
+    .bad {
+        color: red;
+    }
+    </style>
+</head>
+<body>
+<script id="additionalCostTemplate" type="text/template">
+    <div>
+        $<input class="additionalCost"> For: <input placeholder="(Optional)">
+    </div>
+</script>
+
+<script id="loanTemplate" type="text/template">
+    <table class="loanT" style="margin-top: 20px;">
+        <tr><td>Loan amount:</td><td>$<input class="loan" value="375000 * 0.8"></td></tr>
+        <tr><td>Interest Rate:</td><td><input class="rate" value="3.0">%</td></tr>
+        <tr><td>Num Months To Pay:</td><td><input class="months" value="5 * 12"></td></tr>
+        <tr><td>Monthly Payment:</td><td>$<input class="payment" value="2000"> Minimum needed: <span class="min">0</span></td></tr>
+    <tr><td>Additional Monthly Costs:</td><td><div class="additionalCostsContainer"></div><button class="addCost">Add Cost</button></td></tr>
+    </table>
+</script>
+
+<div id="loans">
+</div>
+
+<button id="addLoan">Add Loan</button><br>
+<button id="calcBtn" style="margin-top: 20px;">Calculate</button><br><br>
+
+<div id="out"></div>
+
+<script>
+    /* eslint quotes: 0, one-var: 0 */
+    /* jshint quotmark: true */
+    var $ = document.querySelector.bind(document);
+    var $$ = document.querySelectorAll.bind(document);
+    Element.prototype.$ = function(qry) { return this.querySelector(qry); };
+    Element.prototype.$$ = function(qry) { return this.querySelectorAll(qry); };
+    Element.prototype.on = function(evt, fn) { this.addEventListener(evt, fn, false); };
+    NodeList.prototype.forEach = function(fn) { Array.prototype.slice.call(this).forEach(fn); };
+
+    var formatMoney = function(money) {
+        money = money.toFixed(2);
+        var dot = money.indexOf(".");
+        dot -= 3;
+        while (dot > 0) {
+            money = money.substring(0, dot) + "," + money.substring(dot);
+            dot -= 3;
+        }
+        return "$" + money;
+    }
+
+    var roundUp = function(money) {
+        return Math.ceil(money * 100) / 100;
+    }
+
+    var calcMinPayment = function(loanAmt, periodicInterest, numPayments) {
+        // https://en.wikipedia.org/wiki/Amortization_calculator
+        return loanAmt * (periodicInterest / (Math.pow(1 + periodicInterest, numPayments) - 1) + periodicInterest);
+    };
+
+    var instanceTemplate = function(id) {
+        var temp = document.createElement("div");
+        temp.innerHTML = $("#" + id).innerHTML;
+        return temp.children[0];
+    };
+
+    var makeNewLoan = function() {
+        var el = instanceTemplate("loanTemplate");
+        var loanEl = el.$(".loan");
+        var rateEl = el.$(".rate");
+        var monthsEl = el.$(".months");
+
+        var updateMinPayment = function() {
+            try {
+                // using eval because I want to be able to use math. I'm not gunna write a parser.
+                var loan = eval(loanEl.value);
+                var inter = eval(rateEl.value) / 1200;
+                var months = eval(monthsEl.value);
+
+                var newMinPayment = calcMinPayment(loan, inter, months);
+                if (!isNaN(newMinPayment)) {
+                    el.$(".min").innerText = formatMoney(roundUp(newMinPayment));
+                    //el.$(".payment").value = roundUp(newMinPayment);
+                }
+            } catch(e) {}
+        };
+        loanEl.on("keyup", updateMinPayment);
+        rateEl.on("keyup", updateMinPayment);
+        monthsEl.on("keyup", updateMinPayment);
+
+        el.$(".addCost").on("click", function() {
+            el.$(".additionalCostsContainer").appendChild(instanceTemplate("additionalCostTemplate"));
+        });
+
+        $("#loans").appendChild(el);
+        updateMinPayment();
+    };
+
+    makeNewLoan();
+
+    $("#addLoan").on("click", makeNewLoan);
+
+    var totalLoans = 0;
+    var gatherData = function() {
+        var loans = $$(".loanT");
+        var loansArr = [];
+        totalLoans = 0;
+
+        loans.forEach(function(loan) {
+            try {
+                var extraCosts = 0;
+                loan.$$(".additionalCost").forEach(function(c) {
+                    extraCosts += eval(c.value);
+                });
+                loansArr.push({
+                    // using eval because I want to be able to use math. I'm not gunna write a parser.
+                    loan: eval(loan.$(".loan").value),
+                    rate: eval(loan.$(".rate").value) / 1200,
+                    months: eval(loan.$(".months").value),
+                    payment: eval(loan.$(".payment").value),
+                    extraCosts: extraCosts
+                });
+                totalLoans += loansArr[loansArr.length - 1].loan;
+            } catch(e) { alert("Had trouble parsing a value."); }
+        });
+
+        return loansArr;
+    };
+
+    var calc = function() {
+        var totalInterestPaid = 0;
+        var totalPayment = 0;
+        var totalExtraCosts = 0;
+        var totalPrincipal = 0;
+        var data = gatherData();
+        var stillWorking = true;
+        var month = 0;
+        while (stillWorking) {
+            stillWorking = false;
+            data.forEach(function(d) {
+                if (month < d.months) {
+                    var interest = d.loan * d.rate;
+                    var prevLoan = d.loan;
+                    var principal = d.payment - interest;
+
+                    totalInterestPaid += interest;
+                    d.loan -= principal;
+                    if (d.loan <= 0) {
+                        d.loan = 0;
+                        totalPayment += prevLoan + interest;
+                        totalPrincipal += prevLoan;
+                    } else {
+                        totalPayment += d.payment;
+                        totalPrincipal += principal;
+                    }
+                    totalExtraCosts += d.extraCosts;
+                    stillWorking = true;
+                }
+            });
+            ++month;
+        }
+        month -= 1;
+
+        var outEl = $("#out");
+        if (isNaN(totalInterestPaid) || isNaN(totalPayment) || isNaN(totalExtraCosts)) {
+            outEl.innerHTML = "Failed to parse data.";
+        } else {
+            outEl.innerHTML = "Over " + month + " months...<br><br>" +
+                "Total Paid (not including extra costs):  <span class='money'>" + formatMoney(totalPayment) + "</span><br>" +
+                "Total Interest Paid: <span class='money bad'>" + formatMoney(totalInterestPaid) + "</span><br>" +
+                "Principal Paid: <span class='money'>" + formatMoney(totalPrincipal) + "</span><br>" +
+                "Total Loan left: <span class='money'>" + formatMoney(totalLoans - totalPrincipal) + "</span><br>" +
+                "Total Extra Costs: <span class='money'>" + formatMoney(totalExtraCosts) + "</span><br>" +
+                //"Total Tax Deductions: <span class='money'>" + formatMoney(totalInterestDeduciton) + "</span><br>" +
+                'Total "Lost Forever" Dollars: ' + "<span class='money bad'>" + formatMoney(totalExtraCosts + totalInterestPaid) + "</span><br><br>" +
+                "Ultimate Total Paid: <span class='money'>" + formatMoney(totalPayment + totalExtraCosts) + "</span><br>" +
+                "Keep in mind that assuming a $1,200 rent, you would pay: <span class='money'>" + formatMoney(1200 * month) + "</span>";
+        }
+    };
+
+    $("#calcBtn").on("click", calc);
+
+</script>
+</body>
+</html>

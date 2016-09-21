@@ -1,0 +1,254 @@
+<!doctype html>
+<html>
+<head>
+    <title>Island Gen Test</title>
+    <script src="seedRandom.js"></script>
+    <script src="perlinNoise.js"></script>
+</head>
+<body>
+    <!--
+    inspired from here:
+    http://www.nolithius.com/game-development/world-generation-breakdown
+    -->
+    Tile Size: <input id="tileSize" value="8"><br>
+    Num Elevation Changers: <input id="numEleCha" value="3000"><br>
+    Elevation Changer Life: <input id="eleChaLife" value="25"><br>
+    Cross Movement: <input id="cross" type="checkbox"><br>
+    Seed: <input id="seed" value="1"> Random: <input id="random" type="checkbox"><br>
+    Ocean Level: <input id="oceanCutOff" value="0.3"><br>
+
+    <button onclick="gen()">Generate</button><br>
+    <canvas id="canvas"></canvas>
+    <script>
+    var CANVAS_WIDTH = 512;
+    var CANVAS_HEIGHT = 512;
+
+    function $(query) {
+        return document.querySelector(query);
+    }
+    var canvas = $("#canvas");
+    canvas.width = CANVAS_WIDTH;
+    canvas.height = CANVAS_HEIGHT;
+
+    var ctx = canvas.getContext("2d");
+    var random_seed;
+    var randomGenerator;
+    var heightNoise;
+    var tileSize;
+    var numTileColumns;
+    var numTileRows;
+    var numElevationChangers;
+    var elevationChangerLife;
+    var elevationChangers = [];
+    var tileMat;
+    var elevationChangerMinXStartPos;
+    var elevationChangerMinYStartPos;
+    var elevationChangerMaxXStartPos;
+    var elevationChangerMaxYStartPos;
+    var oceanCutOff;
+    var crossMovement;
+
+    function makeMatrix(width, height) {
+        var mat = [];
+        for (var x=0; x<width; ++x) {
+            mat[x] = [];
+            for (var y=0; y<height; ++y) {
+                mat[x][y] = 0;
+            }
+        }
+        return mat;
+    }
+
+    function randInt(low, high){
+        return Math.floor(randomGenerator.random()*(high-low+1))+low;
+    }
+
+    function elevationChanger(life) {
+        var pos = {
+            x: randInt(elevationChangerMinXStartPos, elevationChangerMaxXStartPos),
+            y: randInt(elevationChangerMinYStartPos, elevationChangerMaxYStartPos)
+        };
+        var isValidMove = function(x, y, currentVal) {
+            currentVal = currentVal || 0;
+            if (x < 0 || y < 0) {
+                return false;
+            }
+            if (x >= numTileColumns || y >= numTileRows) {
+                return false;
+            }
+            if (tileMat[x][y] > currentVal) {
+                return false;
+            }
+            return true;
+        };
+        var findPossibleMovements = function() {
+            var ans = [];
+            for (var x=-1; x<2; ++x) {
+                for (var y=-1; y<2; ++y) {
+                    if (crossMovement) {
+                        if ((x !== 0 || y === 0) || (x === 0 || y !== 0)) {
+                            if (isValidMove(pos.x + x, pos.y + y, tileMat[pos.x][pos.y])) {
+                                ans.push({x: x, y: y});
+                            }
+                        }
+                    } else {
+                        if (x !== 0 || y !== 0) {
+                            if (isValidMove(pos.x + x, pos.y + y, tileMat[pos.x][pos.y])) {
+                                ans.push({x: x, y: y});
+                            }
+                        }
+                    }
+                }
+            }
+            return ans;
+        };
+        var move = function() {
+            if (life <= 0) {
+                return false;
+            }
+            var possibleMoves = findPossibleMovements();
+            if (possibleMoves.length === 0) {
+                life = 0;
+                return false;
+            }
+            var moveToMake = possibleMoves[randInt(0, possibleMoves.length-1)];
+            pos.x += moveToMake.x;
+            pos.y += moveToMake.y;
+            ++tileMat[pos.x][pos.y];
+            --life;
+        };
+
+        // inc initial spot.
+        ++tileMat[pos.x][pos.y];
+
+        return {
+            move: move
+        };
+    }
+
+    function normalizeAndAddNoise() {
+        var tileMin = Infinity;
+        var tileMax = -Infinity;
+        for (var x=0; x<numTileColumns; ++x) {
+            for (var y=0; y<numTileRows; ++y) {
+                tileMin = Math.min(tileMat[x][y], tileMin);
+                tileMax = Math.max(tileMat[x][y], tileMax);
+            }
+        }
+        var range = tileMax - tileMin;
+        for (var x=0; x<numTileColumns; ++x) {
+            for (var y=0; y<numTileRows; ++y) {
+                tileMat[x][y] = ((tileMat[x][y] - tileMin) / range) * heightNoise.getHeight(x,y);
+            }
+        }
+    }
+
+    function draw() {
+        var cutOff = (1 - oceanCutOff) * 255;
+        for (var x=0; x<numTileColumns; ++x) {
+            for (var y=0; y<numTileRows; ++y) {
+                var color = 255 - Math.floor(255 * tileMat[x][y]);
+                var colorStr = "rgb("+0+","+color+","+0+")";
+                if (color > cutOff) {
+                    colorStr = "#000044";
+                }
+                //color = Math.floor(255 * tileMat[x][y]);
+                ctx.fillStyle = colorStr;
+                ctx.fillRect(x*tileSize, y*tileSize, tileSize, tileSize);
+            }
+        }
+    }
+
+    function enlarge() {
+        var oldTileMat = tileMat;
+        tileMat = makeMatrix(numTileColumns*2, numTileRows*2);
+
+        for (var x=0; x<numTileColumns; ++x) {
+            for (var y=0; y<numTileRows; ++y) {
+                var twox = x * 2;
+                var twoy = y * 2;
+                tileMat[twox][twoy] = oldTileMat[x][y];
+                tileMat[twox+1][twoy] = oldTileMat[x][y];
+                tileMat[twox][twoy+1] = oldTileMat[x][y];
+                tileMat[twox+1][twoy+1] = oldTileMat[x][y];
+            }
+        }
+
+        numTileColumns *= 2;
+        numTileRows *= 2;
+        tileSize /= 2;
+    }
+
+    function blur() {
+        var newTileMat = makeMatrix(numTileColumns, numTileRows);
+        var isInBounds = function(x, y) {
+            if (x < 0 || y < 0) {
+                return false;
+            }
+            if (x >= numTileColumns || y >= numTileRows) {
+                return false;
+            }
+            return true;
+        };
+        var getNeighborAverage = function(px, py) {
+            var sum = 0;
+            var num = 0;
+            for (var x=-2; x<3; ++x) {
+                for (var y=-2; y<3; ++y) {
+                    if (isInBounds(px + x, py + y)) {
+                        sum += tileMat[px + x][py + y];
+                        ++num;
+                    }
+                }
+            }
+            return sum/num;
+        };
+        for (var x=0; x<numTileColumns; ++x) {
+            for (var y=0; y<numTileRows; ++y) {
+                newTileMat[x][y] = getNeighborAverage(x, y);
+            }
+        }
+        tileMat = newTileMat;
+    }
+
+    function gen() {
+        ctx.clearRect(0,0,CANVAS_WIDTH,CANVAS_HEIGHT);
+        tileSize = parseInt($("#tileSize").value);
+        numElevationChangers = parseInt($("#numEleCha").value);
+        elevationChangerLife = parseInt($("#eleChaLife").value);
+        oceanCutOff = parseFloat($("#oceanCutOff").value);
+        numTileColumns = Math.ceil(CANVAS_WIDTH/tileSize);
+        numTileRows = Math.ceil(CANVAS_HEIGHT/tileSize);
+        elevationChangerMinXStartPos = Math.floor(1*numTileColumns/8);
+        elevationChangerMinYStartPos = Math.floor(1*numTileRows/8);
+        elevationChangerMaxXStartPos = Math.floor(7*numTileColumns/8);
+        elevationChangerMaxYStartPos = Math.floor(7*numTileRows/8);
+        elevationChangers = [];
+        random_seed = $("#random").checked ? Math.random() + "" : $("#seed").value;
+        $("#seed").value = random_seed;
+        crossMovement = $("#cross").checked;
+        randomGenerator = SeededRandom(random_seed);
+        heightNoise = PerlinNoise(randomGenerator, 20, 20);
+        tileMat = makeMatrix(numTileColumns, numTileRows);
+        for (var t=0; t<numElevationChangers; ++t) {
+            elevationChangers.push(elevationChanger(elevationChangerLife));
+        }
+        for (var x=0; x<elevationChangerLife; ++x) {
+            for (var y=0; y<numElevationChangers; ++y) {
+                elevationChangers[y].move();
+            }
+        }
+        normalizeAndAddNoise();
+
+        var numberOfEnhancements = 3;
+        for (var x = 0; x < numberOfEnhancements; ++x) {
+            enlarge();
+            blur();
+        }
+
+        draw();
+    }
+    gen();
+    </script>
+</body>
+</html>

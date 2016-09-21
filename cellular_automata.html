@@ -1,0 +1,658 @@
+<!DOCTYPE html>
+<html>
+<head>
+<meta charset="UTF-8">
+<title>Cellular Automata</title>
+<style>
+.rule-div {
+    border: 1px solid #000000;
+    float: left;
+    width: 70px;
+    height: 45px;
+    text-align: center;
+    padding-top: 15px;
+    -webkit-touch-callout: none;
+    -webkit-user-select: none;
+    -khtml-user-select: none;
+    -moz-user-select: none;
+    -ms-user-select: none;
+    user-select: none;
+}
+.alive {
+    background-color: #444444;
+    border: 1px solid #000000;
+    display: inline-block;
+    width: 10px;
+    height: 10px;
+    margin: 0 3px;
+}
+.dead {
+    background-color: #ffffff;
+    border: 1px solid #000000;
+    display: inline-block;
+    width: 10px;
+    height: 10px;
+    margin: 0 3px;
+}
+.rule-btn {
+    cursor: pointer;
+}
+.editorCell {
+    border: 1px solid #000000;
+    float: left;
+    width: 48px;
+    height: 34px;
+    text-align: center;
+    padding-top: 16px;
+    font-size: 1.0em;
+    cursor: pointer;
+    -webkit-touch-callout: none;
+    -webkit-user-select: none;
+    -khtml-user-select: none;
+    -moz-user-select: none;
+    -ms-user-select: none;
+    user-select: none;
+}
+.editorCellOn {
+    color: #ffffff;
+    background-color: #000000;
+}
+.editorCellOff {
+    color: #000000;
+    background-color: #ffffff;
+}
+#pixelEditor {
+    margin-top: 20px;
+}
+</style>
+</head>
+<body>
+    <h1>Elementary Cellular Automata with HTML5 Canvas</h1>
+    <h3>Works best in Firefox or Google Chrome.</h3>
+    <b>Instructions:</b><br/>
+    <ul>
+        <li>A black filled in cell is considered 'alive' while a white one is 'dead'.</li>
+        <li>Decide your rules by either typing in the rule number in the textbox or by clicking the small squares under the rows of 3 squares.</li>
+        <li>Use the red rectangle to scroll around a close up view of the top row where you can input the initial conditions.</li>
+        <li>Click on the cell number to toggle that initial condition on or off.</li>
+    </ul>
+    <div style="float: left;">
+        <table>
+            <tr><td>
+            Canvas Width:
+            </td><td>
+            <input type="text" id="cwid" value="600" />
+            </td><td>
+            Cell Height:
+            </td><td>
+            <input type="text" id="cellhei" value="2" />
+            </td></tr>
+            <tr><td>
+            Canvas Height:
+            </td><td>
+            <input type="text" id="chei" value="400" />
+            </td><td>
+            Cell Width:
+            </td><td>
+            <input type="text" id="cellwid" value="2" />
+            </td></tr>
+        </table>
+        <div class="rule-div" style="padding-top: 10px; height: 50px">
+            Rule:<br>
+            <input id="ruleNum" maxlength="3" value="90" style="width: 30px;">
+        </div>
+        <div class="rule-div">
+            <div class="alive"></div><div class="alive"></div><div class="alive"></div><br>
+            <div id="rule7" class="dead rule-btn"></div>
+        </div>
+        <div class="rule-div">
+            <div class="alive"></div><div class="alive"></div><div class="dead"></div><br>
+            <div id="rule6" class="dead rule-btn"></div>
+        </div>
+        <div class="rule-div">
+            <div class="alive"></div><div class="dead"></div><div class="alive"></div><br>
+            <div id="rule5" class="dead rule-btn"></div>
+        </div>
+        <div class="rule-div">
+            <div class="alive"></div><div class="dead"></div><div class="dead"></div><br>
+            <div id="rule4" class="dead rule-btn"></div>
+        </div>
+        <div class="rule-div">
+            <div class="dead"></div><div class="alive"></div><div class="alive"></div><br>
+            <div id="rule3" class="dead rule-btn"></div>
+        </div>
+        <div class="rule-div">
+            <div class="dead"></div><div class="alive"></div><div class="dead"></div><br>
+            <div id="rule2" class="dead rule-btn"></div>
+        </div>
+        <div class="rule-div">
+            <div class="dead"></div><div class="dead"></div><div class="alive"></div><br>
+            <div id="rule1" class="dead rule-btn"></div>
+        </div>
+        <div class="rule-div">
+            <div class="dead"></div><div class="dead"></div><div class="dead"></div><br>
+            <div id="rule0" class="dead rule-btn"></div>
+        </div>
+        <div style="clear: both;">
+            Non Blocking Draw: <input type="checkbox" id="nonBlock" checked="checked">
+            Grid Wrap: <input type="checkbox" id="gridWrap" checked="checked">
+            Show Initial Condition Data: <input type="checkbox" id="showInitCondData"><br>
+            Clear Canvas Before Rendering: <input type="checkbox" id="clearBeforeRender" checked="checked">
+            Render On Initial State Change: <input type="checkbox" id="renderOnStateChange"><br>
+            <input type="button" value="Apply Settings &amp; Redraw" id="apply">
+            <input type="button" value="Render Random" id="random">
+            <input type="button" value="Clear Canvas" id="clearbtn">
+            <input type="button" value="Clear Initial Condition" id="resetInitialCondition">
+            <input type="button" value="Save Canvas as PNG" id="save"><br>
+            <input type="text" style="width: 650px; display: none;" id="initCondData">
+            <input type="button" value="Import Data" style="display: none;" id="import">
+        </div>
+        <div id="pixelEditor">
+            <div class="editorCell" id="searchLeft">&#171;</div>
+            <div class="editorCell"></div>
+            <div class="editorCell"></div>
+            <div class="editorCell"></div>
+            <div class="editorCell"></div>
+            <div class="editorCell"></div>
+            <div class="editorCell"></div>
+            <div class="editorCell"></div>
+            <div class="editorCell"></div>
+            <div class="editorCell"></div>
+            <div class="editorCell"></div>
+            <div class="editorCell"></div>
+            <div class="editorCell" id="searchRight">&#187;</div>
+        </div>
+    </div>
+    <div style="clear: both; padding-top: 20px;">
+        <div id="pixelSelectDiv" style="cursor: pointer">
+            <canvas id="pixelSelect"></canvas>
+        </div>
+        <div id="canvasDiv" style="border: 1px solid #000;">
+            <canvas id="canvas"></canvas>
+        </div>
+    </div>
+    <script type="text/javascript">
+        'use strict';
+
+        // My version of jquery:
+        var $$ = document.querySelectorAll.bind(document);
+        NodeList.prototype.forEach = Array.prototype.forEach;
+        NodeList.prototype.addEventListener = function(type, fn) {
+            this.forEach(function(el) {
+                el.addEventListener(type, fn, false);
+            });
+        };
+        HTMLElement.prototype.addClass = function(className) {
+            this.removeClass(className);
+            var currentClasses = this.className.split(' ');
+            currentClasses.push(className);
+            this.className = currentClasses.join(' ');
+            return this;
+        };
+        HTMLElement.prototype.removeClass = function(className) {
+            var currentClasses = this.className.split(' ');
+            var t = currentClasses.length;
+            while (t-- > 0) {
+                if (currentClasses[t] === className) {
+                    currentClasses.splice(t, 1);
+                }
+            }
+            this.className = currentClasses.join(' ');
+            return this;
+        };
+        HTMLElement.prototype.hasClass = function(className) {
+            var currentClasses = this.className.split(' ');
+            return currentClasses.indexOf(className) > -1;
+        };
+
+        var ui = {};
+        $$('*[id]').forEach(function(el) {
+            ui[el.id] = el;
+        });
+
+        var canvas = ui.canvas;
+        var pixelSelect = ui.pixelSelect;
+        var mainCanvasContext = canvas.getContext('2d');
+        var pixelSelectContext = pixelSelect.getContext('2d');
+        var pixelSelectRect = pixelSelect.getBoundingClientRect();
+        var cwid;
+        var chei;
+        var cellwid;
+        var cellhei;
+        var rule = [];
+        var initialState = [];
+        var rowSize = 0;
+        var colSize = 0;
+        var rowBuffer1 = [];
+        var rowBuffer2 = [];
+        var renderingRow = 0;
+        var nonBlockingDraw = true;
+        var gridWrap = true;
+        var showingData = false;
+        var clearCanvasBeforeRender = true;
+        var renderOnStateChange = false;
+
+        var pixelSelectBarX;
+        var pixelSelectBarCol;
+
+        var editorCells;
+        var mouseDown = false;
+
+        function init() {
+            setRule(ui.ruleNum.value);
+            editorCells = $$('.editorCell');
+
+            changeCanvas(true);
+            drawPixelSelectBar();
+            updatePixelSelectEditor();
+
+            pixelSelect.addEventListener('mousedown', function(e) {
+                var x = e.pageX - pixelSelectRect.left;
+                mouseDown = true;
+
+                pixelSelectBarCol = Math.floor(x / cellwid);
+                pixelSelectBarX = pixelSelectBarCol * cellwid;
+
+                drawPixelSelectBar();
+                updatePixelSelectEditor();
+            });
+
+            window.addEventListener('mousemove', function(e) {
+                if (!mouseDown) {
+                    return;
+                }
+                var x = e.pageX - pixelSelectRect.left;
+                mouseDown = true;
+
+                pixelSelectBarCol = Math.floor(x / cellwid);
+                pixelSelectBarX = pixelSelectBarCol * cellwid;
+
+                drawPixelSelectBar();
+                updatePixelSelectEditor();
+            });
+
+            window.addEventListener('mouseup', function() {
+                mouseDown = false;
+                pixelSelectBarCol = Math.max(Math.min(pixelSelectBarCol, rowSize - 1), 0);
+                pixelSelectBarX = pixelSelectBarCol * cellwid;
+                drawPixelSelectBar();
+                updatePixelSelectEditor();
+            });
+
+            pixelSelect.addEventListener('mouseup', function() {
+                mouseDown = false;
+            });
+
+            editorCells.addEventListener('mousedown', function(e) {
+                var ele = e.target;
+                var index;
+                if (ele.id === 'searchLeft') {
+                    pixelSelectBarCol -= 5;
+                    pixelSelectBarCol = Math.max(pixelSelectBarCol, 0);
+                    pixelSelectBarX = pixelSelectBarCol * cellwid;
+                    drawPixelSelectBar();
+                    updatePixelSelectEditor();
+                } else if (ele.id === 'searchRight') {
+                    pixelSelectBarCol += 5;
+                    pixelSelectBarCol = Math.min(pixelSelectBarCol, rowSize - 1);
+                    pixelSelectBarX = pixelSelectBarCol * cellwid;
+                    drawPixelSelectBar();
+                    updatePixelSelectEditor();
+                } else {
+                    index = ele.innerText;
+                    initialState[index] = !initialState[index];
+                    if (initialState[index]) {
+                        mainCanvasContext.fillStyle = '#000000';
+                        ele.removeClass('editorCellOff').addClass('editorCellOn');
+                    } else {
+                        mainCanvasContext.fillStyle = '#ffffff';
+                        ele.removeClass('editorCellOn').addClass('editorCellOff');
+                    }
+
+                    drawCell(index, 0, true);
+                    mainCanvasContext.fillStyle = '#000000';
+
+                    if (renderOnStateChange) {
+                        if (clearCanvasBeforeRender) {
+                            clearCanvas();
+                        }
+                        startFullSimulation();
+                    }
+
+                    if (showingData) {
+                        updateData();
+                    }
+                }
+            });
+
+            $$('.rule-btn').addEventListener('click', function(e) {
+                var ele = e.target;
+                var idx = ele.id.slice(-1);
+                if (ele.hasClass('alive')) {
+                    ele.removeClass('alive').addClass('dead');
+                    rule[idx] = false;
+                } else {
+                    ele.removeClass('dead').addClass('alive');
+                    rule[idx] = true;
+                }
+
+                parseRule();
+            });
+
+            ui.save.addEventListener('click', saveCanvas);
+            ui.apply.addEventListener('click', changeCanvas);
+
+            ui.resetInitialCondition.addEventListener('click', function() {
+                resetInitialCondition();
+                if (showingData) {
+                    updateData();
+                }
+            });
+
+            ui.clearbtn.addEventListener('click', clearCanvas);
+
+            ui.random.addEventListener('click', function() {
+                randomize();
+                if (showingData) {
+                    updateData();
+                }
+            });
+
+            ui.clearBeforeRender.addEventListener('click', function(e) {
+                if (e.target.checked) {
+                    clearCanvasBeforeRender = true;
+                } else {
+                    clearCanvasBeforeRender = false;
+                    alert('With this setting off, the canvas will not update to size changes either.');
+                }
+            });
+
+            ui.renderOnStateChange.addEventListener('click', function(e) {
+                renderOnStateChange = e.target.checked;
+            });
+
+            ui.showInitCondData.addEventListener('click', function(e) {
+                var input = ui.initCondData;
+                var importBtn = ui.import;
+                if (input.style.display === 'none') {
+                    showingData = true;
+                    input.style.display = 'inline-block';
+                    importBtn.style.display = 'inline-block';
+                    updateData();
+                } else {
+                    showingData = false;
+                    input.style.display = 'none';
+                    importBtn.style.display = 'none';
+                }
+            });
+
+            ui.import.addEventListener('click', function() {
+                var dataString = ui.initCondData.value;
+                var dataStringLen = dataString.length;
+                ui.cwid.value = cellwid * dataStringLen;
+                // Using Array fn for speed.
+                initialState = Array(dataStringLen);
+                for (var t = 0; t < dataStringLen; ++t) {
+                    initialState[t] = dataString[t] === '1';
+                }
+                changeCanvas();
+            });
+
+            ui.ruleNum.addEventListener('keyup', function(e) {
+                setRule(e.target.value);
+            });
+        }
+
+        function parseRule() {
+            var ruleStr = '';
+            for (var t = 7; t > -1; --t) {
+                ruleStr += Number(ui['rule' + t].hasClass('alive'));
+            }
+            ui.ruleNum.value = parseInt(ruleStr, 2);
+        }
+
+        function setRule(ruleNum) {
+            if (isNaN(ruleNum)) {
+                return;
+            }
+            var binary = parseInt(ruleNum).toString(2);
+            var len = binary.length - 1;
+            for (var t = 0; t < 8; ++t) {
+                var idx = len - t;
+                var alive;
+                if (idx < 0) {
+                    alive = false;
+                } else {
+                    alive = binary[idx] === '1';
+                }
+                rule[t] = alive;
+                if (alive) {
+                    ui['rule' + t].removeClass('dead').addClass('alive');
+                } else {
+                    ui['rule' + t].removeClass('alive').addClass('dead');
+                }
+            }
+        }
+
+        function randInt(low, high) {
+            return Math.floor(Math.random() * (high - low + 1)) + low;
+        }
+
+        function clearCanvas() {
+            mainCanvasContext.fillStyle = '#ffffff';
+            mainCanvasContext.fillRect(0, 0, cwid, chei);
+        }
+
+        function changeCanvas(start) {
+            if (typeof start !== 'boolean') {
+                start = false;
+            }
+            var midPoint;
+
+            cwid = ui.cwid.value;
+            chei = ui.chei.value;
+
+            cellhei = ui.cellhei.value;
+            cellwid = ui.cellwid.value;
+
+            nonBlockingDraw = ui.nonBlock.checked;
+            gridWrap = ui.gridWrap.checked;
+
+            colSize = Math.floor(chei / cellhei);
+            rowSize = Math.floor(cwid / cellwid);
+
+            midPoint = Math.floor(rowSize / 2);
+
+            if (start) {
+                initialState = Array(rowSize);
+                initialState[midPoint] = true;
+                pixelSelectBarX = midPoint * cellwid;
+                pixelSelectBarCol = midPoint;
+            } else {
+                initialState = overlayArrays(Array(rowSize), initialState);
+                pixelSelectBarCol = Math.min(pixelSelectBarCol, rowSize - 1);
+                pixelSelectBarX = pixelSelectBarCol * cellwid;
+            }
+
+            if (showingData) {
+                updateData();
+            }
+
+            if (clearCanvasBeforeRender) {
+                ui.canvasDiv.style.width = cwid + 'px';
+                ui.canvasDiv.style.height = chei + 'px';
+                canvas.width = cwid;
+                canvas.height = chei;
+
+                ui.pixelSelectDiv.style.width = cwid + 'px';
+                ui.pixelSelectDiv.style.height = '20px';
+                pixelSelect.width = cwid;
+                pixelSelect.height = 20;
+
+                drawPixelSelectBar();
+                updatePixelSelectEditor();
+                clearCanvas();
+            }
+            startFullSimulation();
+        }
+
+        function startFullSimulation() {
+            var x = 0;
+            var y = 0;
+            var tempBuffer;
+            rowBuffer1 = cloneArray(initialState);
+            mainCanvasContext.fillStyle = '#000000';
+
+            if (nonBlockingDraw) {
+                renderingRow = 0;
+                renderRow();
+            } else {
+                for (y = 0; y < colSize; ++y) {
+                    for (x = 0; x < rowSize; ++x) {
+                        drawCell(x, y, analyzeCell(x, y));
+                    }
+                    tempBuffer = rowBuffer1;
+                    rowBuffer1 = rowBuffer2;
+                    rowBuffer2 = tempBuffer;
+                }
+            }
+        }
+
+        function renderRow() {
+            var y = renderingRow;
+            for (var x = 0; x < rowSize; ++x) {
+                drawCell(x, y, analyzeCell(x, y));
+            }
+            var tempBuffer = rowBuffer1;
+            rowBuffer1 = rowBuffer2;
+            rowBuffer2 = tempBuffer;
+            ++renderingRow;
+            if (y < colSize) {
+                if (y % 4 !== 0) {
+                    renderRow();
+                } else {
+                    setTimeout(renderRow, 0);
+                }
+            }
+        }
+
+        function analyzeCell(x) {
+            var left = x - 1;
+            var right = x + 1;
+            if (gridWrap) {
+                if (left < 0) {
+                    left = rowSize - 1;
+                }
+                if (right > rowSize - 1) {
+                    right = 0;
+                }
+            }
+            // because I'm bad ass.
+            var lookup = ((!!rowBuffer1[left]) << 2) + (rowBuffer1[x] << 1) + (!!rowBuffer1[right]);
+            rowBuffer2[x] = rule[lookup];
+            return rowBuffer1[x];
+        }
+
+        function drawCell(x, y, alive) {
+            if (!alive) {
+                if (clearCanvasBeforeRender) {
+                    return;
+                }
+                mainCanvasContext.fillStyle = '#ffffff';
+            } else {
+                mainCanvasContext.fillStyle = '#000000';
+            }
+            mainCanvasContext.fillRect(x * cellwid, y * cellhei, cellwid, cellhei);
+        }
+
+        function drawPixelSelectBar() {
+            pixelSelectContext.fillStyle = '#ffffff';
+            pixelSelectContext.fillRect(0, 0, cwid, 20);
+            pixelSelectContext.fillStyle = '#ff0000';
+            pixelSelectContext.fillRect(pixelSelectBarX - (5 * cellwid), 0, cellwid * 11, 20);
+        }
+
+        function updatePixelSelectEditor() {
+            var upperLimit = pixelSelectBarCol + 6;
+            var cell = 1;
+            for (var t = pixelSelectBarCol - 5; t < upperLimit; ++t) {
+                if (t < 0 || t > rowSize - 1) {
+                    editorCells[cell].innerText = '';
+                    editorCells[cell].removeClass('editorCellOn').addClass('editorCellOff');
+                } else {
+                    editorCells[cell].innerText = t;
+                    if (initialState[t]) {
+                        editorCells[cell].removeClass('editorCellOff').addClass('editorCellOn');
+                    } else {
+                        editorCells[cell].removeClass('editorCellOn').addClass('editorCellOff');
+                    }
+                }
+                ++cell;
+            }
+        }
+
+        function cloneArray(arr) {
+            var arrLen = arr.length;
+            var out = Array(arrLen);
+            for (var t = 0; t < arrLen; ++t) {
+                out[t] = arr[t];
+            }
+            return out;
+        }
+
+        function overlayArrays(target, src) {
+            var targetLen = target.length;
+            var srcLen = src.length;
+            var x = 0;
+            var y = 0;
+
+            while (x < targetLen && y < srcLen) {
+                target[x] = src[y];
+                ++x;
+                ++y;
+            }
+            return target;
+        }
+
+        function randomize() {
+            var roll;
+            for (var t = 0; t < rowSize - 1; ++t) {
+                roll = randInt(1, 6);
+                if (roll === 1) {
+                    initialState[t] = true;
+                } else {
+                    initialState[t] = false;
+                }
+            }
+            updatePixelSelectEditor();
+            changeCanvas();
+        }
+
+        function resetInitialCondition() {
+            initialState = Array(rowSize);
+            updatePixelSelectEditor();
+            mainCanvasContext.fillStyle = '#ffffff';
+            mainCanvasContext.fillRect(0, 0, cwid, cellhei);
+            mainCanvasContext.fillStyle = '#000000';
+        }
+
+        function updateData() {
+            var ans = '';
+            for (var t = 0; t < rowSize; ++t) {
+                if (initialState[t]) {
+                    ans += '1';
+                } else {
+                    ans += '0';
+                }
+            }
+            ui.initCondData.value = ans;
+        }
+
+        function saveCanvas() {
+            window.open(canvas.toDataURL('image/png'));
+        }
+
+        init();
+    </script>
+</body>
+</html>

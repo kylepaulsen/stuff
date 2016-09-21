@@ -1,0 +1,98 @@
+<html>
+<head>
+    <title>Langton's Ant</title>
+    <style>
+    html, body {
+        margin: 0;
+        padding: 0;
+    }
+    </style>
+</head>
+<body>
+<script type="text/javascript">
+(function() {
+    'use strict';
+
+    var width = window.innerWidth;
+    var height = window.innerHeight;
+
+    var canvas = document.createElement('canvas');
+    canvas.width = width;
+    canvas.height = height;
+
+    var ctx = canvas.getContext('2d');
+
+    document.body.appendChild(canvas);
+
+    var ant = {
+        x: Math.floor(width / 2),
+        y: Math.floor(height / 2),
+        direction: 'up'
+    };
+
+    var turnRight = {
+        up: 'right',
+        right: 'down',
+        down: 'left',
+        left: 'up'
+    };
+
+    var turnLeft = {
+        up: 'left',
+        left: 'down',
+        down: 'right',
+        right: 'up'
+    };
+
+    var direction2MoveCoords = {
+        up: [0, -1],
+        right: [1, 0],
+        down: [0, 1],
+        left: [-1, 0]
+    };
+
+    var iters = 10;
+    var getItersFromURL = function() {
+        var urlParts = location.href.split('?iters=');
+        if (urlParts.length === 2) {
+            iters = parseInt(urlParts[1]);
+        }
+    };
+
+    var imgDataObj = ctx.getImageData(0, 0, width, height);
+    var imgData = imgDataObj.data;
+
+    var iterate = function() {
+        var t = iters;
+        while (t-- > 0) {
+            var idx = (ant.y * width + ant.x) * 4 + 3;
+            if (imgData[idx] === 0) {
+                imgData[idx] = 255;
+                ant.direction = turnRight[ant.direction];
+            } else {
+                imgData[idx] = 0;
+                ant.direction = turnLeft[ant.direction];
+            }
+            var moveCoords = direction2MoveCoords[ant.direction];
+            ant.x += moveCoords[0];
+            ant.y += moveCoords[1];
+            if (ant.x < 0) {
+                ant.x = width - 1;
+            } else if (ant.x >= width) {
+                ant.x = 0;
+            }
+            if (ant.y < 0) {
+                ant.y = height - 1;
+            } else if (ant.y >= height) {
+                ant.y = 0;
+            }
+        }
+        ctx.putImageData(imgDataObj, 0, 0);
+    };
+
+    getItersFromURL();
+    setInterval(iterate, 0);
+})();
+</script>
+</body>
+</html>

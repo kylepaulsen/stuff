@@ -1,0 +1,349 @@
+<html>
+<head>
+    <title>Webworker Test</title>
+</head>
+<body style="overflow: hidden; margin: 0; padding: 0;">
+    <script id="workerScript" type="javascript/webworker">
+        var workerId = null;
+        var canvasWidth;
+        var canvasHeight;
+
+        var maxIterations = 5000;
+        var cutOffDistSquared = 4;
+
+        /* Neat window vars...
+        var xmin = -2.1;
+        var xmax = 0.6;
+        var ymin = 1.2;
+        var ymax = -0.4;
+        */
+
+        var xmin = -2;
+        var xmax = 0.5;
+        var ymin = -1;
+        var ymax = 1;
+
+        var xaxis = xmax - xmin;
+        var yaxis = ymax - ymin;
+
+        var actions = {};
+
+        function sendMessage(obj) {
+            obj.workerId = workerId;
+            // built-in webworker post message function.
+            postMessage(obj);
+        }
+
+        // Prototypal function for organization and speed.
+        function Complex(real, imaginary) {
+            this.real = real;
+            this.imaginary = imaginary;
+        }
+        Complex.prototype.square = function() {
+            var temp = this.real * this.real - this.imaginary * this.imaginary;
+            this.imaginary = 2 * this.real * this.imaginary;
+            this.real = temp;
+            return this;
+        };
+        Complex.prototype.add = function(complex) {
+            this.real += complex.real;
+            this.imaginary += complex.imaginary;
+            return this;
+        };
+        Complex.prototype.magnitudeSquared = function() {
+            return this.real * this.real + this.imaginary * this.imaginary;
+        };
+
+        function checkBulbBounds(x0, y0) {
+            //http://cosinekitty.com/mandel_orbits_analysis.html
+            if (cutOffDistSquared < 2.25) {
+                return false;
+            }
+
+            y0 = Math.abs(y0);
+            var y02 = y0 * y0;
+
+            if (x0 >= -0.75 && x0 <= 0.375 && y0 < 0.64951905284) {
+                //check bulb 1
+                var x02 = x0 * x0;
+                var q = x02 - (x0 * 0.5) + 0.0625 + y02;
+                var q2 = q * q;
+                var bulb = q2 + q * (x0 - 0.25);
+
+                return bulb < (y02 * 0.25);
+            } else if (x0 >= -1.25 && x0 < -0.75 && y0 <= 0.25) {
+                //check bulb 2
+                var dist = (x0 + 1) * (x0 + 1) + y02;
+                return dist <= 0.0625;
+            } else if (x0 >= -1.375 && x0 < -1.25 && y0 <= 0.0625) {
+                //check bulb 3 (3 is not a perfect circle... so doesnt fit this so well)
+                var dist = (x0 + 1.3075) * (x0 + 1.3075) + y02;
+                return dist <= 0.0032;
+            }
+            return false;
+        }
+
+        // create global objects for speed.
+        var z = new Complex(0, 0);
+        var c = new Complex(0, 0);
+
+        // returns a color
+        function calcMandel(startPointComplex) {
+            var iterations = maxIterations;
+            z.real = 0;
+            z.imaginary = 0;
+            if (checkBulbBounds(startPointComplex.real, startPointComplex.imaginary)) {
+                iterations = 0;
+            } else {
+                while (iterations-- && z.magnitudeSquared() < cutOffDistSquared) {
+                    // z = z^2 + c
+                    z.square().add(startPointComplex);
+                }
+            }
+            if (iterations > 0) {
+                var color = [0, 0, 0, 255];
+                var iterationsSquared = iterations * iterations;
+                color[0] = Math.floor(z.real * z.imaginary + iterationsSquared) % 255;
+                color[1] = Math.floor(z.real * z.real + iterationsSquared) % 255;
+                color[2] = Math.floor(z.imaginary * z.imaginary + iterationsSquared) % 255;
+                return color;
+            } else {
+                return [0, 0, 0, 255];
+            }
+        }
+
+        actions.init = function(data) {
+            workerId = data.id;
+            canvasWidth = data.width;
+            canvasHeight = data.height;
+            sendMessage({action: "log", message: "Hello from worker " + workerId});
+        };
+
+        actions.calcSection = function(data) {
+            // num rows to calc in this section.
+            var rows = data.rows;
+            var startRow = data.startRow;
+            // sectionRows * sectionCols * 4 bytes
+            var numPixelBytes = rows * canvasWidth * 4;
+            // Color array - 4 bytes (rgba) per color, left 2 right, top 2 bottom.
+            var colors = new Uint8Array(numPixelBytes);
+            var color;
+            var x = 0;
+            var pixelx = 0;
+            var pixely = startRow;
+            while (x < numPixelBytes) {
+                c.real = pixelx * xaxis / canvasWidth + xmin;
+                c.imaginary = pixely * yaxis / canvasHeight + ymin;
+                color = calcMandel(c);
+                colors[x] = color[0];
+                colors[x + 1] = color[1];
+                colors[x + 2] = color[2];
+                colors[x + 3] = color[3];
+                x += 4;
+                ++pixelx;
+                if (pixelx === canvasWidth) {
+                    pixelx = 0;
+                    ++pixely;
+                }
+            }
+            sendMessage({action: "drawSection", section: colors.buffer, startRow: startRow, rows: rows}, [colors.buffer]);
+        };
+
+        // global worker onmessage function
+        onmessage = function (e) {
+            var data = e.data;
+            var action = actions[data.action];
+
+            if (action) {
+                action(data);
+            } else {
+                postMessage({action: "error", message: "Not a valid action: " + data.action});
+            }
+        };
+    </script>
+
+    <script>
+        var canvas = document.createElement("canvas");
+        var ctx = canvas.getContext("2d");
+        var numWorkers = 4;
+        canvas.width = window.innerWidth;
+        canvas.height = window.innerHeight;
+        document.body.appendChild(canvas);
+
+        var sectionHeight = Math.ceil(canvas.height / numWorkers);
+
+        function getWorkerScript(sel) {
+            var blob = new Blob([
+                document.querySelector(sel).textContent
+            ], {type: "text/javascript"});
+            return window.URL.createObjectURL(blob);
+        }
+
+        var workerSrc = getWorkerScript("#workerScript");
+        var workers = [];
+
+        var workerActions = {};
+
+        workerActions.log = function(data) {
+            console.log(data.message);
+        };
+
+        workerActions.error = function(data) {
+            console.error(data.message);
+        };
+
+        var numDraws = 0;
+        workerActions.drawSection = function(data) {
+            var startRow = data.startRow;
+            var colorArr = new Uint8Array(data.section);
+            var imageSlice = ctx.createImageData(canvas.width, data.rows);
+
+            var x = imageSlice.data.length;
+            while (x-- > 0) {
+                imageSlice.data[x] = colorArr[x];
+            }
+            ctx.putImageData(imageSlice, 0, startRow);
+            ++numDraws;
+            if (numDraws === numWorkers) {
+                console.timeEnd("render");
+            }
+        };
+
+        var workerMessageHandler = function(e) {
+            var data = e.data;
+            var action = workerActions[data.action];
+
+            if (action) {
+                action(data);
+            } else {
+                console.error("Could not understand action: " + data.action);
+            }
+        };
+
+        console.time("render");
+
+        // Render mandelbrot set with webworkers:
+
+        var startRow = 0;
+        for (var x = 0; x < numWorkers; ++x) {
+            workers[x] = new Worker(workerSrc);
+            workers[x].onmessage = workerMessageHandler;
+            workers[x].postMessage({action: "init", id: x, width: canvas.width, height: canvas.height});
+            if (startRow + sectionHeight > canvas.height) {
+                var overflow = canvas.height - (startRow + sectionHeight);
+                sectionHeight += overflow;
+            }
+            workers[x].postMessage({action: "calcSection", rows: sectionHeight, startRow: startRow});
+            startRow += sectionHeight;
+        }
+
+        /*
+        // Render mandelbrot without webworkers:
+        var xmin = -2;
+        var xmax = 0.5;
+        var ymin = -1;
+        var ymax = 1;
+
+        var cutOffDistSquared = 4;
+
+        var xaxis = xmax - xmin;
+        var yaxis = ymax - ymin;
+        var imageSlice = ctx.createImageData(canvas.width, canvas.height);
+
+        function Complex(c, i) {
+            this.real = c;
+            this.imaginary = i;
+        }
+        Complex.prototype.square = function() {
+            var temp = this.real * this.real - this.imaginary * this.imaginary;
+            this.imaginary = 2 * this.real * this.imaginary;
+            this.real = temp;
+            return this;
+        };
+        Complex.prototype.add = function(c, i) {
+            this.real += c;
+            this.imaginary += i;
+            return this;
+        };
+        Complex.prototype.magnitudeSquared = function() {
+            return this.real * this.real + this.imaginary * this.imaginary;
+        };
+
+        function checkBulbBounds(x0, y0) {
+            //http://cosinekitty.com/mandel_orbits_analysis.html
+            if (cutOffDistSquared < 2.25) {
+                return false;
+            }
+
+            y0 = Math.abs(y0);
+            var y02 = y0 * y0;
+
+            if (x0 >= -0.75 && x0 <= 0.375 && y0 < 0.64951905284) {
+                //check bulb 1
+                var x02 = x0 * x0;
+                var q = x02 - (x0 * 0.5) + 0.0625 + y02;
+                var q2 = q * q;
+                var bulb = q2 + q * (x0 - 0.25);
+
+                return bulb < (y02 * 0.25);
+            } else if (x0 >= -1.25 && x0 < -0.75 && y0 <= 0.25) {
+                //check bulb 2
+                var dist = (x0 + 1) * (x0 + 1) + y02;
+                return dist <= 0.0625;
+            } else if (x0 >= -1.375 && x0 < -1.25 && y0 <= 0.0625) {
+                //check bulb 3 (3 is not a perfect circle... so doesnt fit this so well)
+                var dist = (x0 + 1.3075) * (x0 + 1.3075) + y02;
+                return dist <= 0.0032;
+            }
+            return false;
+        }
+
+        var z = new Complex(0, 0);
+        console.time("render");
+        var maxX = canvas.width;
+        var maxY = canvas.height;
+        var colorIdx = 0;
+        for (var y = 0; y < maxY; ++y) {
+            for (var x = 0; x < maxX; ++x) {
+                var x0 = x * xaxis / maxX + xmin;
+                var y0 = y * yaxis / maxY + ymin;
+                var iterations = 5000;
+                z.real = 0;
+                z.imaginary = 0;
+                if (checkBulbBounds(x0, y0)) {
+                    imageSlice.data[colorIdx] = 0;
+                    imageSlice.data[colorIdx+1] = 0;
+                    imageSlice.data[colorIdx+2] = 0;
+                    imageSlice.data[colorIdx+3] = 255;
+                } else {
+                    while (iterations-- && z.magnitudeSquared() < cutOffDistSquared) {
+                        // z = z^2 + c
+                        z.square().add(x0, y0);
+                    }
+                    if (iterations > 0) {
+                        var color = [0, 0, 0, 255];
+                        var iterationsSquared = iterations * iterations;
+                        color[0] = Math.floor(z.real * z.imaginary + iterationsSquared) % 255;
+                        color[1] = Math.floor(z.real * z.real + iterationsSquared) % 255;
+                        color[2] = Math.floor(z.imaginary * z.imaginary + iterationsSquared) % 255;
+
+                        imageSlice.data[colorIdx] = color[0];
+                        imageSlice.data[colorIdx+1] = color[1];
+                        imageSlice.data[colorIdx+2] = color[2];
+                        imageSlice.data[colorIdx+3] = 255;
+                    } else {
+                        imageSlice.data[colorIdx] = 0;
+                        imageSlice.data[colorIdx+1] = 0;
+                        imageSlice.data[colorIdx+2] = 0;
+                        imageSlice.data[colorIdx+3] = 255;
+                    }
+                }
+                colorIdx += 4;
+            }
+        }
+        ctx.putImageData(imageSlice, 0, 0);
+        console.timeEnd("render");
+        */
+    </script>
+</body>
+</html>

@@ -1,0 +1,44 @@
+body {
+    margin: 0;
+    overflow: hidden;
+    line-heeight: 0;
+    font-size: 0;
+}
+
+#modal {
+    display: none;
+    font-size: 14px;
+}
+
+#editor {
+    color: #ffffff;
+    height: 100%;
+    font-size: 14px;
+}
+
+#qualityDiv {
+    float: left;
+    width: 80%;
+}
+
+#qualityDiv input {
+    width: 80%;
+}
+
+#compileDiv {
+    float: right;
+}
+
+#edit {
+    position: absolute;
+    top: 10px;
+    right: 10px;
+    font-size: 16px;
+    opacity: 0.2;
+    cursor: pointer;
+    transition: opacity 0.3s;
+}
+
+#edit:hover {
+    opacity: 1.0;
+}

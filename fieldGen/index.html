@@ -1,0 +1,83 @@
+<html>
+<head>
+    <title>Test</title>
+    <style>
+    </style>
+    <script src="seedRandom.js"></script>
+    <script src="simplex-noise.min.js"></script>
+</head>
+<body style="margin: 0; padding: 0;">
+    <canvas id="canvas" width="800" height="600"></canvas>
+    <script>
+        function $(query) {
+            return document.querySelector(query);
+        }
+        var canvas = $("#canvas");
+        var ctx = canvas.getContext("2d");
+        var random_seed = Math.random();
+        var randomGenerator = SeededRandom(random_seed);
+        var tileTypeNoise = new SimplexNoise(randomGenerator.random);
+        var tileSize = 2;
+        var numTileColumns = 800/tileSize;
+        var numTileRows = 600/tileSize;
+        var tileMat;
+
+        function makeMatrix(width) {
+            var mat = [];
+            for (var t=0; t<width; ++t) {
+                mat[t] = [];
+            }
+            return mat;
+        }
+
+        function randomize() {
+            var val;
+            var zoom = 128;
+            for (var row=0; row<numTileRows; ++row) {
+                for (var col=0; col<numTileColumns; ++col) {
+                    // divide by 2 then add 0.5 to restrict the noise between [0, 1]
+                    val = tileTypeNoise.noise2D(row/zoom, col/zoom) * 0.5 + 0.5;
+                    tileMat[row][col] = val;
+                }
+            }
+        }
+
+        function pickValueInRange(rangeObjs, value) {
+            var numRangeObjs = rangeObjs.length;
+            var offsetRange = 0;
+            var rangeObj;
+            for (var t=0; t<numRangeObjs; ++t) {
+                rangeObj = rangeObjs[t];
+                if (value <= offsetRange + rangeObj.rate) {
+                    return rangeObj.val;
+                } else {
+                    offsetRange += rangeObj.rate;
+                }
+            }
+        }
+
+        function draw() {
+            var color;
+            var colorRanges = [
+                {rate: 0.17, val: "#0000ff"}, // water
+                {rate: 0.06, val: "#ffff00"}, // sand
+                {rate: 0.57, val: "#00ff00"}, // grass
+                {rate: 0.12, val: "#999920"}, // dirt
+                {rate: 0.08, val: "#666666"}  // rock
+            ];
+            for (var row=0; row<numTileRows; ++row) {
+                for (var col=0; col<numTileColumns; ++col) {
+                    color = pickValueInRange(colorRanges, tileMat[row][col]);
+                    ctx.fillStyle = color;
+                    ctx.fillRect(col*tileSize, row*tileSize, tileSize, tileSize);
+                }
+            }
+        }
+
+        tileMat = makeMatrix(numTileRows);
+        randomize();
+        draw();
+
+    </script>
+</body>
+</html>

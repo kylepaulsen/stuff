@@ -1,0 +1,247 @@
+<!doctype html>
+<html>
+<head>
+    <title>Elastic Collisions for PI</title>
+</head>
+<body>
+    <h1>Calculate Digits of PI with Newtonian Elastic Collisions</h1>
+    <p style="width: 800px;">In a pure frictionless environment with elastic collisions (all kinetic energy is preserved),
+    2 particles (red and blue) colliding with each other and a wall will help calculate the digits of pi. If each collision is counted
+    (when a particle hits a wall or the other particle) then under special conditions, the answer will be digits of pi.
+    The key is in the number of times more mass one particle has than the other. To calculate 3, both particles should have the same mass.
+    To calculate 31, the red particle must have 100 times the mass as blue. To calculate 314, the red particle must have 10000 times
+    the mass as blue. Generally, to calculate the first N digits of PI, the red particle must be 100<sup>(N-1)</sup> times the mass of blue.</p>
+    Digits to Calculate: <input id="digits" type="number" value="2"><br>
+    Show Visuals: <input id="show" type="checkbox" checked><br>
+    Non Blocking: <input id="nonBlock" type="checkbox" checked> Speed (lower is faster): <input type="number" id="speed" value="50"><br>
+    <button id="calcBtn">Calculate!</button>
+    <br><br>
+    <div id="ans"></div>
+    <br>
+    <canvas id="canvas" style="border: 1px solid #000000; border-right: 0"></canvas>
+
+    <script>
+        'use strict';
+        const canvasWidth = 800;
+        const canvasHeight = 1600;
+
+        const digitsInput = document.querySelector('#digits');
+        const showVisCB = document.querySelector('#show');
+        const nonBlockingCB = document.querySelector('#nonBlock');
+        const speedInput = document.querySelector('#speed');
+        const calcBtn = document.querySelector('#calcBtn');
+        const ansBox = document.querySelector('#ans');
+        const canvas = document.querySelector('#canvas');
+        canvas.width = canvasWidth;
+        canvas.height = canvasHeight;
+        const ctx = canvas.getContext('2d');
+
+        let currentSimTimeout;
+
+        function canvasSimulate(m1, m2) {
+            // vars with 1 are the small ball
+            // vars with 2 are the large ball
+            const massDiff1 = m1 - m2;
+            const massDiff2 = m2 - m1;
+            const totalMass = m1 + m2;
+            const doubleM1 = m1 + m1;
+            const doubleM2 = m2 + m2;
+            let x1 = 300;
+            let x2 = 600;
+            let v1 = 0;
+            let v2 = -1;
+
+            let nextCollisionT = 0;
+            let totalT = 0;
+            let x1n;
+            let x2n;
+            let done = false;
+            let collisions = 0;
+
+            while (v1 < 0 || !done) {
+                if (v1 >= 0) {
+                    // b 2 b collision
+                    nextCollisionT = (x2 - x1) / (v1 - v2);
+                    if (v2 > v1) {
+                        // the last collision might have already happened.
+                        nextCollisionT = (10e6 - x2) / v2;
+                        done = true;
+                    } else {
+                        collisions++;
+                    }
+                    x1n = x1 + v1 * nextCollisionT;
+                    x2n = x2 + v2 * nextCollisionT;
+
+                    const newV1 = (v1 * massDiff1 + doubleM2 * v2) / totalMass;
+                    v2 = (v2 * massDiff2 + doubleM1 * v1) / totalMass;
+                    v1 = newV1;
+                } else {
+                    // b 2 w collision
+                    nextCollisionT = -x1 / v1;
+                    x1n = x1 + v1 * nextCollisionT;
+                    x2n = x2 + v2 * nextCollisionT;
+
+                    v1 = -v1;
+                    collisions++;
+                }
+                const newTotalT = totalT + nextCollisionT;
+
+                ctx.strokeStyle = '#0000ff';
+                ctx.beginPath();
+                ctx.moveTo(x1, totalT);
+                ctx.lineTo(x1n, newTotalT);
+                ctx.stroke();
+
+                ctx.strokeStyle = '#ff0000';
+                ctx.beginPath();
+                ctx.moveTo(x2, totalT);
+                ctx.lineTo(x2n, newTotalT);
+                ctx.stroke();
+
+                x1 = x1n;
+                x2 = x2n;
+                totalT = newTotalT;
+            }
+            return collisions;
+        }
+
+        // Non Blocking version.
+        // I'm too lazy to not duplicate code. Also I'd probably have to stick the iter() function call
+        // in the while loop, which sounds slow - so forget it.
+        function canvasSimulateNB(m1, m2) {
+            // vars with 1 are the small ball
+            // vars with 2 are the large ball
+            const massDiff1 = m1 - m2;
+            const massDiff2 = m2 - m1;
+            const totalMass = m1 + m2;
+            const doubleM1 = m1 + m1;
+            const doubleM2 = m2 + m2;
+            const speed = parseInt(speedInput.value);
+            let x1 = 300;
+            let x2 = 600;
+            let v1 = 0;
+            let v2 = -1;
+
+            let nextCollisionT = 0;
+            let totalT = 0;
+            let x1n;
+            let x2n;
+            let done = false;
+            let collisions = 0;
+
+            function doneFunc() {
+                ansBox.textContent = 'Digits of pi: ' + collisions;
+            }
+            function iter() {
+                if (v1 < 0 || !done) {
+                    if (v1 >= 0) {
+                        // b 2 b collision
+                        nextCollisionT = (x2 - x1) / (v1 - v2);
+                        if (v2 > v1) {
+                            // the last collision might have already happened.
+                            nextCollisionT = (10e6 - x2) / v2;
+                            done = true;
+                        } else {
+                            collisions++;
+                        }
+                        x1n = x1 + v1 * nextCollisionT;
+                        x2n = x2 + v2 * nextCollisionT;
+
+                        const newV1 = (v1 * massDiff1 + doubleM2 * v2) / totalMass;
+                        v2 = (v2 * massDiff2 + doubleM1 * v1) / totalMass;
+                        v1 = newV1;
+                    } else {
+                        // b 2 w collision
+                        nextCollisionT = -x1 / v1;
+                        x1n = x1 + v1 * nextCollisionT;
+                        x2n = x2 + v2 * nextCollisionT;
+
+                        v1 = -v1;
+                        collisions++;
+                    }
+                    const newTotalT = totalT + nextCollisionT;
+
+                    ctx.strokeStyle = '#0000ff';
+                    ctx.beginPath();
+                    ctx.moveTo(x1, totalT);
+                    ctx.lineTo(x1n, newTotalT);
+                    ctx.stroke();
+
+                    ctx.strokeStyle = '#ff0000';
+                    ctx.beginPath();
+                    ctx.moveTo(x2, totalT);
+                    ctx.lineTo(x2n, newTotalT);
+                    ctx.stroke();
+
+                    x1 = x1n;
+                    x2 = x2n;
+                    totalT = newTotalT;
+                    currentSimTimeout = setTimeout(iter, speed);
+                } else {
+                    doneFunc();
+                }
+            }
+            iter();
+
+            return 'Calculating...';
+        }
+
+        // non canvas version.
+        function countElasticCollisions(m1, m2) {
+            if (m2 > m1) {
+                const temp = m1;
+                m1 = m2;
+                m2 = temp;
+            }
+            const massDiff1 = m1 - m2;
+            const massDiff2 = m2 - m1;
+            const totalMass = m1 + m2;
+            const doubleM1 = m1 + m1;
+            const doubleM2 = m2 + m2;
+            let v1 = 1;
+            let v2 = 0;
+            let collisions = 0;
+            while (v1 >= 0 || (v1 < 0 && v2 < v1)) {
+                const newV1 = (v1 * massDiff1 + doubleM2 * v2) / totalMass;
+                v2 = (v2 * massDiff2 + doubleM1 * v1) / totalMass;
+                v1 = newV1;
+                collisions++;
+
+                if (v2 > 0) {
+                    // object 2 will hit an elastic wall and bounce back.
+                    collisions++;
+                    v2 = -v2;
+                }
+            }
+            return collisions;
+        }
+
+        function sim() {
+            const digits = parseInt(digitsInput.value);
+            const showVis = showVisCB.checked;
+
+            if (currentSimTimeout) {
+                clearTimeout(currentSimTimeout);
+                currentSimTimeout = 0;
+            }
+
+            ctx.clearRect(0, 0, canvasWidth, canvasHeight);
+
+            let ans;
+            if (showVis) {
+                if (nonBlockingCB.checked) {
+                    ans = canvasSimulateNB(1, Math.pow(100, digits - 1));
+                } else {
+                    ans = canvasSimulate(1, Math.pow(100, digits - 1));
+                }
+            } else {
+                ans = countElasticCollisions(1, Math.pow(100, digits - 1));
+            }
+            ansBox.textContent = 'Digits of pi: ' + ans;
+        }
+
+        calcBtn.addEventListener('click', sim);
+        sim();
+    </script>
+</body>
+</html>

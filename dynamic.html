@@ -1,0 +1,124 @@
+<html>
+<head>
+    <title>Dynamic</title>
+</head>
+<body>
+    Sack Size: <input id="sack_size" value="30"><br>
+    Items: <textarea id="items" rows="16" cols="80">[
+    {"name":"A","value":5,"size":7},
+    {"name":"B","value":8,"size":9},
+    {"name":"C","value":5,"size":6},
+    {"name":"D","value":2,"size":1},
+    {"name":"E","value":4,"size":5},
+    {"name":"F","value":4,"size":5},
+    {"name":"G","value":10,"size":15},
+    {"name":"H","value":6,"size":7},
+    {"name":"I","value":3,"size":2},
+    {"name":"J","value":7,"size":9}
+]</textarea><br>
+    <input id="load" value="Load and Solve" type="button">
+    <div id="ans"></div>
+    <script>
+        'use strict';
+        var $ = document.querySelectorAll.bind(document);
+
+        function listen(ele, eventType, listener, prop) {
+            if (typeof prop === 'undefined') {
+                prop = false;
+            }
+            ele.addEventListener(eventType, listener, prop);
+        }
+
+        var sackSize;
+        var items;
+
+        function loadProblem() {
+            sackSize = parseInt($('#sack_size')[0].value);
+            items = $('#items')[0].value;
+            try {
+                items = JSON.parse(items);
+            } catch (e) {
+                alert('Could not parse items.');
+            }
+        }
+
+        function newArray(size) {
+            var newArr = [];
+            newArr.length = size;
+            return newArr;
+        }
+
+        function solve() {
+            var numItems = items.length;
+            var table = newArray(numItems + 1);
+            var row = 0;
+            var col = 0;
+            var currentItem;
+            var previousBest;
+            var nextBest;
+            var bestItems = [];
+            var ans = 'Take items: ';
+
+            while (row <= numItems) {
+                // sackSize plus one for sackSize 0
+                table[row] = newArray(sackSize + 1);
+                table[row][0] = 0;
+                ++row;
+            }
+
+            while (col <= sackSize) {
+                table[0][col] = 0;
+                ++col;
+            }
+
+            for (row = 1; row <= numItems; ++row) {
+                for (col = 1; col <= sackSize; ++col) {
+                    currentItem = items[row - 1];
+                    nextBest = 0;
+                    if (currentItem.size <= col) {
+                        previousBest = table[row - 1][col - currentItem.size];
+                        nextBest = currentItem.value + previousBest;
+                    }
+                    table[row][col] = Math.max(nextBest, table[row - 1][col]);
+                }
+            }
+
+            row = numItems;
+            col = sackSize;
+
+            while (row > 0 && col > 0) {
+                if (table[row][col] !== table[row - 1][col]) {
+                    bestItems.push(row - 1);
+                    ans += items[row - 1].name + ', ';
+                    col -= items[row - 1].size;
+                }
+                --row;
+            }
+
+            ans = ans.substring(0, ans.length - 2);
+            ans += ' for maximum value of: ' + table[numItems][sackSize];
+            console.log(tableToString(table));
+            //console.log(bestItems);
+            $('#ans')[0].innerHTML = ans;
+        }
+
+        function tableToString(arr) {
+            var ans = '';
+            for (var x = 0, len1 = arr.length; x < len1; ++x) {
+                for (var y = 0, len2 = arr[x].length; y < len2; ++y) {
+                    ans += arr[x][y] + ', ';
+                }
+                ans += '\n';
+            }
+            return ans;
+        }
+
+        listen($('#load')[0], 'click', function() {
+            loadProblem();
+            solve();
+        });
+
+        loadProblem();
+    </script>
+</body>
+</html>

@@ -1,0 +1,19 @@
+{
+  "name": "perler-pixels",
+  "version": "1.0.0",
+  "description": "A tool to help you plan and make perlers",
+  "directories": {
+    "test": "tests"
+  },
+  "scripts": {
+    "build": "node build.js indexDev.html index.html",
+    "test": "echo \"Error: no test specified\" && exit 1"
+  },
+  "keywords": [
+    "perler",
+    "beads"
+  ],
+  "author": "Kyle Paulsen <kyle.a.paulsen@gmail.com> (http://www.kylepaulsen.com/)",
+  "license": "ISC",
+  "devDependencies": {}
+}

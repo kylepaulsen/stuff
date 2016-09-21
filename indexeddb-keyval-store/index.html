@@ -1,0 +1,73 @@
+<html>
+<body>
+    Id: <input id="inId"> String: <input id="strInput"> <button id="saveBtn">Save</button><br>
+    Id: <input id="outId"> <button id="getBtn">Get</button> <button id="getAllBtn">Get All</button> <button id="clearBtn">Clear Store</button>
+    <div id="output"></div>
+    <script type="text/javascript" src="keyvalDB.js"></script>
+    <script type="text/javascript">
+        function $(id) {
+            return document.querySelector("#" + id);
+        }
+        var outputDiv = $("output");
+        function log(str) {
+            outputDiv.innerHTML += str + "<br>";
+        }
+
+        var db = keyvalDB("TestStore", [{store: "strings", key:"id"}], 1);
+        var stringStore = db.usingStore("strings");
+        db.open(function (err, ok) {
+            if (err) {
+                console.log(err);
+                log("ERROR: could not open db");
+            }
+        });
+
+        $("saveBtn").onclick = function() {
+            var id = $("inId").value || (Math.random() + "").substring(2, 6);
+            var str = $("strInput").value;
+            stringStore.upsert(id, {str: str}, function(err, ok) {
+                if (!err) {
+                    log("Successfully saved string with id: "+id);
+                } else {
+                    console.log(err);
+                    log("ERROR: Could not save string!");
+                }
+            });
+        };
+
+        $("getBtn").onclick = function() {
+            var id = $("outId").value;
+            stringStore.get(id, function(err, result) {
+                if (!err) {
+                    log("Fetched String "+id+": "+result.str);
+                } else {
+                    console.log(err);
+                    log("ERROR: Could not fetch string!");
+                }
+            });
+        };
+
+        $("getAllBtn").onclick = function() {
+            stringStore.getAll(function(err, results) {
+                 if (!err) {
+                    log("Fetched Strings: " + JSON.stringify(results));
+                } else {
+                    console.log(err);
+                    log("ERROR: Could not fetch strings!");
+                }
+            });
+        };
+
+        $("clearBtn").onclick = function() {
+            stringStore.clearStore(function(err, results) {
+                 if (!err) {
+                    log("Successfully cleared the string store.");
+                } else {
+                    console.log(err);
+                    log("ERROR: Could not clear the string store!");
+                }
+            });
+        };
+    </script>
+</body>
+</hmtl>

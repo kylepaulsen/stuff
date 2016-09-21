@@ -1,0 +1,73 @@
+<!doctype html>
+<html>
+    <head>
+        <title>Image2Perler</title>
+        <link rel="stylesheet" type="text/css" href="style.css">
+    </head>
+    <body class="noselect">
+        <div id="overlay">Please Wait...</div>
+        <div id="all">
+            <div id="topBar">
+                <span id="mainMenu" class="menu">
+                    <input type="file" id="fileSelect" style="display: none">
+                    <button id="openBtn">Open Image</button>
+                    <button id="cropBtn">Crop</button>
+                    <button id="transparentBtn">Select Transparent Color</button>
+                    <button id="convertBtn">Convert To Bead Colors</button>
+                </span>
+
+                <span id="cropMenu" class="menu">
+                    <b>Crop</b>
+                    <span style="margin-left: 20px">
+                        X: <input id="cropX" type="number" min="0">
+                        Y: <input id="cropY" type="number" min="0">
+                        Width: <input id="cropWidth" type="number" min="1">
+                        Height: <input id="cropHeight" type="number" min="1">
+                    </span>
+                    <div>
+                        <button id="cancelCropBtn">Cancel</button>
+                        <button id="confirmCropBtn">Crop!</button>
+                    </div>
+                </span>
+
+                <span id="transparentMenu" class="menu">
+                    <b>Select Transparent Color</b>
+                    <span style="margin-left: 20px">
+                        Select colors that should be transparent with the mouse.
+                    </span>
+                    <div>
+                        <button id="transparentDoneBtn">Done</button>
+                    </div>
+                </span>
+            </div>
+            <div id="mid">
+                <canvas id="canvas"></canvas>
+                <canvas id="cropCanvas"></canvas>
+                <canvas id="gridCanvas"></canvas>
+            </div>
+            <div id="bottomBar">
+                <span id="zoomSpan">
+                    Zoom: <input id="zoomRange" type="range" min="10" max="3000" step="10"> <input id="zoom" type="number" value="100" min="1">%
+                </span>
+                <span id="showGridSpan">
+                    Show Grid: <input type="checkbox" id="showGrid">
+                </span>
+                <span id="statsSpan">(0 , 0) = ???</span>
+            </div>
+        </div>
+        <script src="src/picoModal.min.js"></script>
+        <!-- build-js -->
+        <script src="src/util.js"></script>
+        <script src="src/worker.js"></script>
+        <script src="src/crop.js"></script>
+        <script src="src/zoom.js"></script>
+        <script src="src/grid.js"></script>
+        <script src="src/colorDiff.js"></script>
+        <script src="src/beads.js"></script>
+        <script src="src/transparentColors.js"></script>
+        <script src="src/convertColors.js"></script>
+        <script src="src/stats.js"></script>
+        <script src="src/main.js"></script>
+        <!-- /build-js -->
+    </body>
+</html>

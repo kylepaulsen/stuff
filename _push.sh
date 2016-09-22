@@ -20,3 +20,8 @@ git push
 #     git cherry-pick temp
 #     git branch -D temp
 # fi
+
+echo ""
+echo "Done! Press any key to continue."
+
+read

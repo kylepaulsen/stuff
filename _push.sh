@@ -1,4 +1,6 @@
 #!/bin/bash
+node unlisted/_publicIndexCreator.js
+
 git add --all .
 git commit -m ":star: A commit :star:"
 git push

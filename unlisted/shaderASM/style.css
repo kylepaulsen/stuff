@@ -1,0 +1,414 @@
+html, body {
+    padding: 0;
+    margin: 0;
+    width: 100%;
+    height: 100%;
+    overflow: hidden;
+    font-family: sans-serif;
+    color: #333333;
+}
+
+#left {
+    float: left;
+    width: 60%;
+    background: #eeeeee;
+    height: 100%;
+    position: relative;
+}
+
+#right {
+    float: left;
+    width: 40%;
+    background: #ffffff;
+    height: 100%;
+    position: relative;
+}
+
+#tv {
+    display: inline-block;
+    position: absolute;
+    top: 50%;
+    left: 50%;
+    transform: translate(-50%, -50%) scale(1);
+}
+
+#tv img {
+    position: absolute;
+    left: -77px;
+    width: 751px;
+    top: -158px;
+}
+
+#canvas {
+    width: 600px;
+}
+
+@media screen and (max-width: 1400px) , screen and (max-height: 950px) {
+    #tv {
+        transform: translate(-50%, -50%) scale(0.75);
+    }
+}
+
+@media screen and (max-width: 1100px) , screen and (max-height: 720px) {
+    #tv {
+        transform: translate(-50%, -50%) scale(0.5);
+    }
+}
+
+#remote {
+    border: 2px solid #000000;
+    border-radius: 30px;
+    width: 95%;
+    height: 95%;
+    margin: 3%;
+    background: linear-gradient(to bottom, #b2b2b2 0%,#939393 13%,#848484 100%);
+}
+
+#remoteScale {
+    display: flex;
+    flex-direction: column;
+    height: 98%;
+}
+
+@media screen and (max-width: 1760px) , screen and (max-height: 950px) {
+    #remoteScale {
+        transform-origin: top;
+        transform: scale(0.75);
+        height: 130%;
+    }
+}
+
+@media screen and (max-width: 1250px) , screen and (max-height: 720px) {
+    #remoteScale {
+        transform-origin: top;
+        transform: scale(0.50);
+        height: 198%;
+    }
+}
+
+#memory {
+    margin-top: 40px;
+}
+
+#memRow1 {
+    display: flex;
+    justify-content: center;
+}
+
+#memRow2 {
+    display: flex;
+    justify-content: center;
+    margin-left: 20px;
+}
+
+#memRow1 .memory:not(:first-child) {
+    margin-top: 25px;
+}
+
+.selectingMemory .memory {
+    cursor: pointer;
+}
+
+.memory {
+    flex: 0 0 50px;
+    width: 50px;
+    height: 50px;
+    border: 2px solid #000000;
+    margin: 5px 8px;
+    font-size: 12px;
+    text-align: right;
+    padding: 2px 3px;
+    background: #dddddd;
+}
+
+#memory #memRow1 .selectedMem {
+    border: 4px solid #ff0000;
+    margin: 23px 6px 3px 6px;
+}
+
+#memRow2 .selectedMem {
+    border: 4px solid #ff0000;
+    margin: 3px 6px;
+}
+
+#mem0 {
+    flex: 0 0 70px;
+    width: 70px;
+    height: 70px;
+}
+
+#memory #mem0.selectedMem {
+    border: 4px solid #ff0000;
+    margin: 3px 6px;
+}
+
+@keyframes flashSelectedMem {
+    from {
+        border-color: #000000;
+    }
+
+    to {
+        border-color: #ff0000;
+    }
+}
+
+.selectedMem {
+    animation-duration: 0.5s;
+    animation-name: flashSelectedMem;
+    animation-iteration-count: infinite;
+    animation-direction: alternate;
+}
+
+#mem0 .memVal {
+    text-align: center;
+    font-size: 30px;
+    margin-top: 4px;
+}
+
+.memVal {
+    text-align: center;
+    font-size: 18px;
+    font-weight: bold;
+    pointer-events: none;
+}
+
+#editor {
+    flex: 1;
+    display: flex;
+    justify-content: center;
+    margin-top: 20px;
+}
+
+#commands {
+    flex: 0 0 200px;
+    border: 1px solid #000000;
+    position: relative;
+}
+
+#program {
+    flex: 0 0 400px;
+    border: 1px solid #000000;
+    overflow: auto;
+}
+
+#takeCommands {
+    opacity: 0;
+    position: absolute;
+    top: 0;
+    left: 0;
+}
+
+.command {
+    margin-bottom: 6px;
+    opacity: 0;
+}
+
+.command span {
+    background: linear-gradient(to bottom, #7db9e8 0%,#2989d8 25%,#1e5799 100%);
+    padding: 10px;
+    display: inline-block;
+    border-radius: 10px;
+    font-size: 24px;
+    color: #ffffff;
+    cursor: pointer;
+}
+
+body .command {
+    display: none;
+}
+
+.commandList .command {
+  opacity: 1;
+  display: block;
+  float: left;
+  clear: both;
+}
+
+.commandVal {
+    margin-left: 10px;
+    text-align: center;
+    min-width: 28px;
+}
+
+@keyframes flashVal {
+    from {
+        color: #000000;
+    }
+
+    to {
+        color: #ffffff;
+    }
+}
+
+.selectingVal {
+    animation-duration: 0.5s;
+    animation-name: flashVal;
+    animation-iteration-count: infinite;
+    animation-direction: alternate;
+}
+
+#controlButtons {
+    display: flex;
+    justify-content: center;
+    margin-top: 20px;
+}
+
+.controlBtn {
+    height: 80px;
+    width: 80px;
+    background-color: #666666;
+    border-radius: 40px;
+    cursor: pointer;
+    box-sizing: border-box;
+    font-size: 0;
+    margin: 0 10px;
+}
+
+#prevBtn {
+  padding: 20px 0 0 20px;
+}
+
+#playBtn {
+  padding: 20px 0 0 28px;
+}
+
+#stopBtn {
+  padding: 25px 0 0 25px;
+}
+
+#nextBtn {
+  padding: 20px 0 0 20px;
+}
+
+.triangle {
+    border-style: solid;
+    border-width: 20px 0 20px 30px;
+    border-color: transparent transparent transparent #22ee77;
+    display: inline-block;
+}
+
+.square {
+  width: 30px;
+  height: 30px;
+  background: #ee4444;
+}
+
+.bar {
+  width: 8px;
+  height: 40px;
+  background: #4499ee;
+  display: inline-block;
+}
+
+#prevBtn .triangle {
+    border-width: 20px 30px 20px 0;
+    border-color: transparent #4499ee; transparent transparent;
+}
+
+#nextBtn .triangle {
+    border-color: transparent transparent transparent #4499ee;;
+}
+
+#modalOverlay {
+    background: rgba(0, 0, 0, 0.5);
+    position: fixed;
+    top: 0;
+    left: 0;
+    right: 0;
+    bottom: 0;
+    z-index: 100;
+    display: none;
+}
+
+#createValueModal {
+    position: absolute;
+    top: 50%;
+    left: 50%;
+    transform: translate(-50%, -50%);
+    z-index: 101;
+    border-radius: 10px;
+    width: 300px;
+    height: 200px;
+    display: flex;
+    flex-direction: column;
+    padding: 16px;
+    box-sizing: border-box;
+    background: linear-gradient(to bottom, #b2b2b2 0%,#939393 13%,#848484 100%);
+    border: 2px solid #000000;
+    display: none;
+}
+
+#modalTitle {
+    text-align: center;
+    font-weight: bold;
+}
+
+#modalContent {
+    flex: 1;
+    padding: 0 30px;
+}
+
+#modalContent table {
+    width: 100%;
+}
+
+.createNum {
+    text-align: center;
+    font-size: 58px;
+    line-height: 48px;
+}
+
+#modalBottom {
+    text-align: center;
+}
+
+#createBtn {
+    width: 100px;
+    height: 30px;
+    text-align: center;
+    display: inline-block;
+    background: #666666;
+    color: #4499ee;
+    border-radius: 16px;
+    font-weight: bold;
+    font-size: 20px;
+    padding: 3px;
+    box-sizing: border-box;
+    margin-top: 3px;
+    cursor: pointer;
+}
+
+.arrowBtn {
+    text-align: center;
+    height: 30px;
+    padding: 5px;
+    box-sizing: border-box;
+    width: 80%;
+    background: #666666;
+    display: inline-block;
+    border-radius: 16px;
+    cursor: pointer;
+}
+
+.arrows td {
+    text-align: center;
+}
+
+.upArrow {
+    width: 0;
+    height: 0;
+    border-left: 14px solid transparent;
+    border-right: 14px solid transparent;
+    border-bottom: 18px solid #4499ee;
+    display: inline-block;
+}
+
+.downArrow {
+    width: 0;
+    height: 0;
+    border-left: 14px solid transparent;
+    border-right: 14px solid transparent;
+    border-top: 18px solid #4499ee;
+    display: inline-block;
+    margin-top: 2px;
+}

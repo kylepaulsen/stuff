@@ -1,5 +1,6 @@
 function pixelVisionCPU(canvas) {
     const MAXMEM = 16;
+    const MAX_ALLOWED_INST = 999;
     const cpuData = {
         maxMem: MAXMEM,
         instructions: [],
@@ -34,9 +35,9 @@ function pixelVisionCPU(canvas) {
         let y = height;
         let idx = 0;
         let err;
+        cpuData.mem = new Uint8Array(cpuData.maxMem);
 
         while (idx < imgDataSize) {
-            cpuData.mem = new Uint8Array(cpuData.maxMem);
             const mem = cpuData.mem;
             cpuData.instructionPointer = 0;
 
@@ -48,13 +49,18 @@ function pixelVisionCPU(canvas) {
             mem[5] = y;
             mem[6] = frame;
 
+            let instructionsSinceLastPixelOut = 0;
             let nextInst = cpuData.instructions[cpuData.instructionPointer++];
             while (nextInst && nextInst.type !== 'pixelOut') {
                 err = nextInst.run(cpuData);
+                if (instructionsSinceLastPixelOut > MAX_ALLOWED_INST) {
+                    err = 'Might be in infinite loop! Emergency break!';
+                }
                 if (err) {
                     break;
                 }
                 nextInst = cpuData.instructions[cpuData.instructionPointer++];
+                instructionsSinceLastPixelOut++;
             }
             if (!nextInst) {
                 err = 'Didn\'t get a pixel out!';
@@ -62,6 +68,7 @@ function pixelVisionCPU(canvas) {
             if (err) {
                 break;
             }
+            instructionsSinceLastPixelOut = 0;
 
             const newIdx = 4 * ((height - mem[5]) * width + mem[4]);
             imgData[newIdx] = mem[1];
@@ -96,9 +103,15 @@ function pixelVisionCPU(canvas) {
         }
     };
 
+    const nextFrame = function() {
+        render();
+        stop();
+    };
+
     return {
         cpuData,
         run,
+        nextFrame,
         stop
     };
 }

@@ -4,7 +4,7 @@ const path = require('path');
 
 const publicFiles = fs.readdirSync(process.cwd());
 
-var ignoreArr = [
+const ignoreArr = [
     'index.html',
     'unlisted',
     '_push.sh',
@@ -54,7 +54,7 @@ let indexHTML = `<!DOCTYPE html>
 `;
 
 function getExt(file) {
-    var fileNameParts = file.split('.');
+    const fileNameParts = file.split('.');
     if (fileNameParts.length) {
         return fileNameParts[fileNameParts.length - 1];
     }

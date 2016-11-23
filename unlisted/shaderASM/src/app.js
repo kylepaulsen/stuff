@@ -25,39 +25,61 @@ const takeCommands = $('#fakeCommands').cloneNode(true);
 takeCommands.id = 'takeCommands';
 $('#commands').appendChild(takeCommands);
 
-Sortable.create($('#program'), {
+const jumpSvg = $('#jumpSvg');
+let nextJumpId = 0;
+let currentlyDraggingEl;
+let currentScale = 1;
+
+Sortable.create(program, {
     sort: true,
     group: {
         name: 'list',
         pull: true,
         put: true
     },
+    filter: '#jumpSvg',
     animation: 150,
     onAdd: function(evt) {
-        addCmd(evt.item);
+        setTimeout(function() {
+            // must wait for render?
+            fixJumpPaths();
+            addCmd(evt.item);
+        }, 0);
+    },
+    onStart: function(evt) {
+        currentlyDraggingEl = evt.item;
     },
     onEnd: function(evt) {
-        evt.item.style.opacity = 1;
-        evt.item.style.width = 'auto';
-        evt.item.style.height = 'auto';
-        evt.item.style.marginBottom = '6px';
-    },
-    onMove: function (evt, originalEvent) {
-        var targetEl = evt.dragged;
-        if (targetEl.parentElement !== document.body) {
-            targetEl.style.opacity = 0;
+        const targetEl = evt.item;
+        targetEl.style.opacity = 1;
+        if (targetEl.className.indexOf('jumpEnd') === -1) {
             targetEl.style.width = 'auto';
             targetEl.style.height = 'auto';
             targetEl.style.marginBottom = '6px';
+        }
+        fixJumpPaths();
+        currentlyDraggingEl = undefined;
+    },
+    onMove: function (evt, originalEvent) {
+        const targetEl = evt.dragged;
+        if (targetEl.parentElement !== document.body) {
+            targetEl.style.opacity = 0;
+            if (targetEl.className.indexOf('jumpEnd') === -1) {
+                targetEl.style.width = 'auto';
+                targetEl.style.height = 'auto';
+                targetEl.style.marginBottom = '6px';
+            }
         } else {
-            targetEl.style.width = '0px';
-            targetEl.style.height = '0px';
-            targetEl.style.marginBottom = '0px';
+            if (targetEl.className.indexOf('jumpEnd') === -1) {
+                targetEl.style.width = '0px';
+                targetEl.style.height = '0px';
+                targetEl.style.marginBottom = '0px';
+            }
         }
     }
 });
 
-Sortable.create($('#takeCommands'), {
+Sortable.create(takeCommands, {
     sort: false,
     group: {
         name: 'list',
@@ -95,10 +117,25 @@ Sortable.create($('body'), {
         put: true
     },
     onAdd: function (evt) {
-        var el = evt.item;
-        el.parentNode.removeChild(el);
+        const el = evt.item;
+        if (el.className.indexOf('jump') > -1) {
+            const id = el.dataset.jumpId;
+            const start = $('#jumpCmd' + id);
+            const end = $('#jumpEnd' + id);
+            const endPath = $('#jumpPath' + id);
+            start.parentNode.removeChild(start);
+            end.parentNode.removeChild(end);
+            endPath.parentNode.removeChild(endPath);
+        } else {
+            el.parentNode.removeChild(el);
+        }
     }
 });
+
+document.body.addEventListener('dragover', fixJumpPaths);
+program.addEventListener('dragover', fixJumpPaths);
+takeCommands.addEventListener('dragover', fixJumpPaths);
+
 
 function selectMemory(currentVal) {
     return new Promise(function(res) {
@@ -170,20 +207,83 @@ function createValue(currentVal) {
     });
 }
 
+function fixJumpPaths(e) {
+    jumpSvg.setAttributeNS(null, 'height', program.offsetHeight);
+    const jumpCmds = program.querySelectorAll('.jumpCmd');
+    let x = jumpCmds.length;
+
+    const fixIt = function(cmdEl) {
+        const jumpId = cmdEl.dataset.jumpId;
+        const jumpTarget = $('#jumpEnd' + jumpId);
+        const jumpPath = $('#jumpPath' + jumpId);
+        let startX = 78;
+        if (cmdEl.className.indexOf('jumpLessThan') > -1) {
+            startX = 184;
+        } else if (cmdEl.className.indexOf('jumpEqual') > -1) {
+            startX = 190;
+        }
+
+        if (jumpTarget) {
+            let startY = cmdEl.offsetTop + 24;
+            let endY = jumpTarget.offsetTop + 24;
+            if (currentlyDraggingEl && e) {
+                const offset = program.getBoundingClientRect().top;
+                if (cmdEl === currentlyDraggingEl) {
+                    startY = e.clientY / currentScale - offset / currentScale;
+                } else if (jumpTarget === currentlyDraggingEl) {
+                    endY = e.clientY / currentScale - offset / currentScale;
+                }
+            }
+            // sigmoid function
+            const curveSize = Math.max((2 / (1 + Math.pow(Math.E, -Math.abs(startY - endY) / 100)) - 1) * 450, startX + 34);
+            let path = 'M' + startX + ' ' + startY + ' C' + curveSize + ' ' + startY + ' ' +
+                curveSize + ' ' + endY + ' 96 ' + endY;
+            jumpPath.setAttributeNS(null, 'd', path);
+        }
+    };
+
+    while (x-- > 0) {
+        fixIt(jumpCmds[x]);
+    }
+
+    if (currentlyDraggingEl && currentlyDraggingEl.className.indexOf('jumpCmd') > -1) {
+        fixIt(currentlyDraggingEl);
+    }
+}
+
+function addJumpRelatedElements(el) {
+    const jumpEnd = document.createElement('div');
+    jumpEnd.className = 'jumpEnd command';
+    jumpEnd.id = 'jumpEnd' + nextJumpId;
+    jumpEnd.dataset.jumpId = nextJumpId;
+    el.id = 'jumpCmd' + nextJumpId;
+    el.dataset.jumpId = nextJumpId;
+    el.parentNode.insertBefore(jumpEnd, el);
+    const jumpPath = document.createElementNS('http://www.w3.org/2000/svg', 'path');
+    jumpPath.id = 'jumpPath' + nextJumpId;
+    jumpPath.setAttributeNS(null, 'class', 'jumpPath');
+    jumpSvg.appendChild(jumpPath);
+    nextJumpId++;
+}
+
 function addCmd(el) {
     console.log('add!');
     const cmdType = el.className.split(' ')[0];
     let inputPromise;
-    switch (cmdType) {
-    case 'readCmd':
-    case 'storeCmd':
-    case 'addCmd':
-    case 'subtractCmd':
-        inputPromise = selectMemory();
-        break;
-    case 'createCmd':
+    let isJump = false;
+
+    if (cmdType === 'createCmd') {
         inputPromise = createValue();
-        break;
+    } else if (cmdType === 'jumpCmd') {
+        isJump = true;
+        if (el.className.indexOf('jumpLessThan') > -1 || el.className.indexOf('jumpEqual') > -1) {
+            inputPromise = selectMemory();
+        } else {
+            addJumpRelatedElements(el);
+            fixJumpPaths();
+        }
+    } else if (cmdType !== 'pixelOutCmd') {
+        inputPromise = selectMemory();
     }
 
     if (inputPromise) {
@@ -210,7 +310,26 @@ function addCmd(el) {
             });
 
             el.dataset.val = val;
+
+            if (isJump) {
+                addJumpRelatedElements(el);
+                fixJumpPaths();
+            }
         });
+    }
+}
+
+function findJumpEndIdx(commands, id) {
+    const target = $('#jumpEnd' + id);
+    let realIdx = 0;
+    for (let x = 0; x < commands.length; x++) {
+        const cmd = commands[x];
+        if (cmd === target) {
+            return realIdx;
+        }
+        if (cmd.className.indexOf('jumpEnd') === -1) {
+            realIdx++;
+        }
     }
 }
 
@@ -238,6 +357,27 @@ function compileProgram() {
             break;
         case 'subtractCmd':
             newCommand = new SubtractInst(loc(cmd.dataset.val));
+            break;
+        case 'multiplyCmd':
+            newCommand = new MultiplyInst(loc(cmd.dataset.val));
+            break;
+        case 'divideCmd':
+            newCommand = new DivideInst(loc(cmd.dataset.val));
+            break;
+        case 'distanceCmd':
+            newCommand = new DistanceInst(loc(cmd.dataset.val));
+            break;
+        case 'modCmd':
+            newCommand = new ModInst(loc(cmd.dataset.val));
+            break;
+        case 'jumpCmd':
+            if (cmd.className.indexOf('jumpLessThan') > -1) {
+                newCommand = new JumpLessThanInst(loc(cmd.dataset.val), findJumpEndIdx(commands, cmd.dataset.jumpId));
+            } else if (cmd.className.indexOf('jumpEqual') > -1) {
+                newCommand = new JumpEqualInst(loc(cmd.dataset.val), findJumpEndIdx(commands, cmd.dataset.jumpId));
+            } else {
+                newCommand = new JumpInst(findJumpEndIdx(commands, cmd.dataset.jumpId));
+            }
             break;
         case 'pixelOutCmd':
             newCommand = new PixelOutInst();
@@ -309,3 +449,12 @@ $('#oneDown').addEventListener('click', function() {
     numOnes.textContent = nextVal;
     resetIfOver255();
 });
+
+function getScale() {
+    currentScale = parseFloat(window.getComputedStyle($('#remoteScale')).transform.substring(7));
+    if (isNaN(currentScale)) {
+        currentScale = 1;
+    }
+}
+getScale();
+window.addEventListener('resize', getScale);

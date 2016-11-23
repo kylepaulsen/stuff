@@ -183,12 +183,41 @@ html, body {
     flex: 0 0 200px;
     border: 1px solid #000000;
     position: relative;
+    overflow: auto;
 }
 
-#program {
+#programArea {
     flex: 0 0 400px;
     border: 1px solid #000000;
     overflow: auto;
+    position: relative;
+    display: flex;
+    flex-direction: column;
+}
+
+#program {
+    flex: 1;
+    position: relative;
+    z-index: 1;
+}
+
+#jumpSvg {
+    position: absolute;
+    top: 0;
+    left: 0;
+    z-index: 0;
+}
+
+.jumpPath {
+    fill: none;
+    stroke-width: 5;
+    stroke: #205da2;
+    marker-end: url(#jumpArrow);
+}
+
+.jumpArrow {
+    fill: #205da2;
+    stroke-width: 0;
 }
 
 #takeCommands {
@@ -203,14 +232,43 @@ html, body {
     opacity: 0;
 }
 
-.command span {
-    background: linear-gradient(to bottom, #7db9e8 0%,#2989d8 25%,#1e5799 100%);
+.command span, .jumpEnd {
+    background: linear-gradient(to bottom, #7db9e8 0%, #2989d8 25%, #1e5799 100%);
     padding: 10px;
     display: inline-block;
     border-radius: 10px;
     font-size: 24px;
     color: #ffffff;
     cursor: pointer;
+}
+
+.readCmd span, .storeCmd span, .createCmd span {
+    background: linear-gradient(to bottom, #e87e7e 0%, #d82e2a 25%, #9a2a1e 100%);
+}
+
+.addCmd span, .subtractCmd span, .multiplyCmd span, .divideCmd span, .distanceCmd span, .modCmd span {
+    background: linear-gradient(to bottom, #88cd6f 0%, #49be26 25%, #2c881a 100%);
+}
+
+.pixelOutCmd span {
+    background: linear-gradient(to bottom, #9b5fae 0%, #8421a1 25%, #651774 100%);
+}
+
+.commandDesc {
+    font-size: 16px;
+    line-height: 16px;
+    display: inline-block;
+    vertical-align: middle;
+    margin-left: 8px;
+}
+
+.jumpEnd {
+    width: 58px;
+    height: 28px;
+}
+
+.jumpLessThan span {
+    padding: 8px 10px;
 }
 
 body .command {

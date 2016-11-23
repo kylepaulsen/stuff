@@ -31,14 +31,15 @@ function pixelVisionCPU(canvas) {
 
     const render = function() {
         //console.time('render time');
-        let x = 0;
-        let y = height;
-        let idx = 0;
-        let err;
+        // using var to help V8 not bail out!
+        var x = 0;
+        var y = height;
+        var idx = 0;
+        var err;
         cpuData.mem = new Uint8Array(cpuData.maxMem);
 
         while (idx < imgDataSize) {
-            const mem = cpuData.mem;
+            var mem = cpuData.mem;
             cpuData.instructionPointer = 0;
 
             // feed in initial data.
@@ -49,8 +50,8 @@ function pixelVisionCPU(canvas) {
             mem[5] = y;
             mem[6] = frame;
 
-            let instructionsSinceLastPixelOut = 0;
-            let nextInst = cpuData.instructions[cpuData.instructionPointer++];
+            var instructionsSinceLastPixelOut = 0;
+            var nextInst = cpuData.instructions[cpuData.instructionPointer++];
             while (nextInst && nextInst.type !== 'pixelOut') {
                 err = nextInst.run(cpuData);
                 if (instructionsSinceLastPixelOut > MAX_ALLOWED_INST) {
@@ -70,7 +71,7 @@ function pixelVisionCPU(canvas) {
             }
             instructionsSinceLastPixelOut = 0;
 
-            const newIdx = 4 * ((height - mem[5]) * width + mem[4]);
+            var newIdx = 4 * ((height - mem[5]) * width + mem[4]);
             imgData[newIdx] = mem[1];
             imgData[newIdx + 1] = mem[2];
             imgData[newIdx + 2] = mem[3];

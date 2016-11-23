@@ -6,6 +6,7 @@ const locToIdx = {
     Y: 5,
     T: 6
 };
+
 function loc(idx, isPointer) {
     idx = locToIdx[idx] || parseInt(idx);
     return {

@@ -1,4 +1,5 @@
 const $ = document.querySelector.bind(document);
+const $$ = document.querySelectorAll.bind(document);
 
 const canvas = document.querySelector('#canvas');
 canvas.width = 255;
@@ -8,17 +9,6 @@ ctx.fillRect(0, 0, canvas.width, canvas.height);
 
 const cpu = pixelVisionCPU(canvas);
 const instructions = cpu.cpuData.instructions;
-
-// some cool stuff:
-// r = 255 - x
-// g = x
-// b = y
-
-// try this shit:
-// r = r + t
-// x = x - t
-// y = y + r
-
 
 const program = $('#program');
 const takeCommands = $('#fakeCommands').cloneNode(true);
@@ -259,11 +249,38 @@ function addJumpRelatedElements(el) {
     el.id = 'jumpCmd' + nextJumpId;
     el.dataset.jumpId = nextJumpId;
     el.parentNode.insertBefore(jumpEnd, el);
+    createJumpPath(nextJumpId);
+    nextJumpId++;
+}
+
+function createJumpPath(id) {
     const jumpPath = document.createElementNS('http://www.w3.org/2000/svg', 'path');
-    jumpPath.id = 'jumpPath' + nextJumpId;
+    jumpPath.id = 'jumpPath' + id;
     jumpPath.setAttributeNS(null, 'class', 'jumpPath');
     jumpSvg.appendChild(jumpPath);
-    nextJumpId++;
+}
+
+function addCommandVal(el, val) {
+    const valContainer = document.createElement('span');
+    valContainer.className = 'commandVal';
+    valContainer.textContent = val;
+    el.appendChild(valContainer);
+
+    valContainer.addEventListener('click', function() {
+        if (el.className.indexOf('createCmd') > -1) {
+            createValue(valContainer.textContent).then(function(val) {
+                valContainer.textContent = val;
+                el.dataset.val = val;
+            });
+        } else {
+            valContainer.className += ' selectingVal';
+            selectMemory(valContainer.textContent).then(function(val) {
+                valContainer.className = 'commandVal';
+                valContainer.textContent = val;
+                el.dataset.val = val;
+            });
+        }
+    });
 }
 
 function addCmd(el) {
@@ -288,26 +305,7 @@ function addCmd(el) {
 
     if (inputPromise) {
         inputPromise.then(function(val) {
-            const valContainer = document.createElement('span');
-            valContainer.className = 'commandVal';
-            valContainer.textContent = val;
-            el.appendChild(valContainer);
-
-            valContainer.addEventListener('click', function() {
-                if (el.className.indexOf('createCmd') > -1) {
-                    createValue(valContainer.textContent).then(function(val) {
-                        valContainer.textContent = val;
-                        el.dataset.val = val;
-                    });
-                } else {
-                    valContainer.className += ' selectingVal';
-                    selectMemory(valContainer.textContent).then(function(val) {
-                        valContainer.className = 'commandVal';
-                        valContainer.textContent = val;
-                        el.dataset.val = val;
-                    });
-                }
-            });
+            addCommandVal(el, val);
 
             el.dataset.val = val;
 
@@ -317,6 +315,66 @@ function addCmd(el) {
             }
         });
     }
+}
+
+function saveToJSON() {
+    const allCmdEls = program.querySelectorAll('.command');
+    const cmds = [];
+    for (let x = 0; x < allCmdEls.length; x++) {
+        const cmd = allCmdEls[x];
+        const toSave = {};
+        toSave.className = cmd.className;
+        if (cmd.id) {
+            toSave.id = cmd.id;
+        }
+        if (cmd.dataset.val) {
+            toSave.val = cmd.dataset.val;
+        }
+        if (cmd.dataset.jumpId) {
+            toSave.jumpId = cmd.dataset.jumpId;
+        }
+        cmds.push(toSave);
+    }
+    return JSON.stringify(cmds);
+}
+
+function loadFromJSON(stringData) {
+    const paths = $$('.jumpPath');
+    let t = paths.length;
+    while (t-- > 0) {
+        paths[t].parentNode.removeChild(paths[t]);
+    }
+
+    program.innerHTML = '';
+    const commands = $('#fakeCommands');
+    const data = JSON.parse(stringData);
+    for (let x = 0; x < data.length; x++) {
+        //<div class="readCmd command"><span>Read</span></div>
+        const cmd = data[x];
+        const refNode = commands.querySelector('.' + cmd.className.replace(/ /g, '.'));
+        let newCommand;
+        if (!refNode) {
+            newCommand = document.createElement('div');
+            newCommand.className = cmd.className;
+        } else {
+            newCommand = refNode.cloneNode(true);
+        }
+        if (cmd.val !== undefined) {
+            newCommand.dataset.val = cmd.val;
+            addCommandVal(newCommand, cmd.val);
+        }
+        if (cmd.jumpId !== undefined) {
+            if (cmd.className.indexOf('jumpEnd') > -1) {
+                newCommand.id = 'jumpEnd' + cmd.jumpId;
+            } else {
+                newCommand.id = 'jumpCmd' + cmd.jumpId;
+            }
+            newCommand.dataset.jumpId = cmd.jumpId;
+            createJumpPath(cmd.jumpId);
+        }
+        program.appendChild(newCommand);
+    }
+    fixJumpPaths();
 }
 
 function findJumpEndIdx(commands, id) {
@@ -335,7 +393,7 @@ function findJumpEndIdx(commands, id) {
 
 function compileProgram() {
     console.log('compile!');
-    const commands = document.querySelectorAll('#program .command');
+    const commands = program.querySelectorAll('.command');
     cpu.cpuData.instructions = [];
 
     for (let x = 0; x < commands.length; x++) {

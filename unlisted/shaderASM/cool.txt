@@ -1,0 +1,28 @@
+// Blue ceil, red wall
+
+loadFromJSON(`[{"className":"createCmd command","val":"15"},{"className":"storeCmd command","val":"15"},{"className":"readCmd command","val":"X"},{"className":"distanceCmd command","val":"Y"},{"className":"jumpCmd jumpLessThan command","id":"jumpCmd0","val":"T","jumpId":"0"},{"className":"readCmd command","val":"B"},{"className":"addCmd command","val":"15"},{"className":"modCmd command","val":"Y"},{"className":"storeCmd command","val":"B"},{"className":"pixelOutCmd command"},{"className":"jumpEnd command","id":"jumpEnd0","jumpId":"0"},{"className":"readCmd command","val":"R"},{"className":"addCmd command","val":"15"},{"className":"modCmd command","val":"X"},{"className":"storeCmd command","val":"R"},{"className":"pixelOutCmd command"}]`)
+
+
+// blue and red strobe with space filler
+
+loadFromJSON(`[{"className":"readCmd command","val":"X"},{"className":"distanceCmd command","val":"Y"},{"className":"jumpCmd jumpLessThan command","id":"jumpCmd0","val":"T","jumpId":"0"},{"className":"readCmd command","val":"B"},{"className":"distanceCmd command","val":"Y"},{"className":"storeCmd command","val":"B"},{"className":"pixelOutCmd command"},{"className":"jumpEnd command","id":"jumpEnd0","jumpId":"0"},{"className":"readCmd command","val":"R"},{"className":"distanceCmd command","val":"X"},{"className":"storeCmd command","val":"R"},{"className":"pixelOutCmd command"}]`)
+
+
+// red chaos vs blue chaos
+
+loadFromJSON(`[{"className":"readCmd command","val":"R"},{"className":"addCmd command","val":"X"},{"className":"divideCmd command","val":"Y"},{"className":"multiplyCmd command","val":"T"},{"className":"storeCmd command","val":"R"},{"className":"readCmd command","val":"B"},{"className":"addCmd command","val":"Y"},{"className":"divideCmd command","val":"X"},{"className":"multiplyCmd command","val":"T"},{"className":"storeCmd command","val":"B"},{"className":"pixelOutCmd command"}]`)
+
+
+// a trip for the ages (rectangle fractions)
+
+loadFromJSON(`[{"className":"createCmd command","val":"255"},{"className":"subtractCmd command","val":"X"},{"className":"addCmd command","val":"R"},{"className":"storeCmd command","val":"R"},{"className":"readCmd command","val":"G"},{"className":"addCmd command","val":"X"},{"className":"storeCmd command","val":"G"},{"className":"readCmd command","val":"B"},{"className":"addCmd command","val":"Y"},{"className":"storeCmd command","val":"B"},{"className":"readCmd command","val":"T"},{"className":"distanceCmd command","val":"X"},{"className":"storeCmd command","val":"X"},{"className":"pixelOutCmd command"}]`)
+
+
+// sandstorm:
+
+loadFromJSON(`[{"className":"readCmd command","val":"G"},{"className":"addCmd command","val":"T"},{"className":"storeCmd command","val":"G"},{"className":"storeCmd command","val":"R"},{"className":"readCmd command","val":"X"},{"className":"subtractCmd command","val":"T"},{"className":"storeCmd command","val":"X"},{"className":"readCmd command","val":"Y"},{"className":"addCmd command","val":"G"},{"className":"storeCmd command","val":"Y"},{"className":"pixelOutCmd command"}]`)
+
+
+// a cave with water randomly painted
+
+loadFromJSON(`[{"className":"readCmd command","val":"R"},{"className":"modCmd command","val":"X"},{"className":"storeCmd command","val":"G"},{"className":"readCmd command","val":"B"},{"className":"distanceCmd command","val":"T"},{"className":"multiplyCmd command","val":"T"},{"className":"storeCmd command","val":"X"},{"className":"readCmd command","val":"Y"},{"className":"distanceCmd command","val":"T"},{"className":"storeCmd command","val":"B"},{"className":"modCmd command","val":"Y"},{"className":"storeCmd command","val":"R"},{"className":"pixelOutCmd command"}]`)

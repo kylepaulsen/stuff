@@ -2,8 +2,8 @@ const $ = document.querySelector.bind(document);
 const $$ = document.querySelectorAll.bind(document);
 
 const canvas = document.querySelector('#canvas');
-canvas.width = 255;
-canvas.height = 255;
+canvas.width = 256;
+canvas.height = 256;
 const ctx = canvas.getContext('2d');
 ctx.fillRect(0, 0, canvas.width, canvas.height);
 
@@ -395,6 +395,7 @@ function saveGif(numFrames, delay, quality) {
     });
 
     compileProgram();
+    cpu.stop();
     cpu.reset();
     while (numFrames-- > 0) {
         cpu.nextFrame();

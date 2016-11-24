@@ -17,15 +17,18 @@ function pixelVisionCPU(canvas) {
     let frame;
     let requestedFrame;
 
-    const run = function() {
+    const reset = function() {
         width = canvas.width;
         height = canvas.height;
-        ctx.clearRect(0, 0, width, height);
+        ctx.fillRect(0, 0, width, height);
         imgDataObj = ctx.getImageData(0, 0, width, height);
         imgData = imgDataObj.data;
         imgDataSize = imgData.length;
         frame = 0;
+    };
 
+    const run = function() {
+        reset();
         render();
     };
 
@@ -104,15 +107,28 @@ function pixelVisionCPU(canvas) {
         }
     };
 
+    const resume = function() {
+        if (!requestedFrame) {
+            render();
+        }
+    };
+
     const nextFrame = function() {
-        render();
-        stop();
+        if (!imgDataObj) {
+            reset();
+        }
+        if (!requestedFrame) {
+            render();
+            stop();
+        }
     };
 
     return {
         cpuData,
         run,
         nextFrame,
-        stop
+        stop,
+        reset,
+        resume
     };
 }

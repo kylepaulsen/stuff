@@ -26,3 +26,23 @@ loadFromJSON(`[{"className":"readCmd command","val":"G"},{"className":"addCmd co
 // a cave with water randomly painted
 
 loadFromJSON(`[{"className":"readCmd command","val":"R"},{"className":"modCmd command","val":"X"},{"className":"storeCmd command","val":"G"},{"className":"readCmd command","val":"B"},{"className":"distanceCmd command","val":"T"},{"className":"multiplyCmd command","val":"T"},{"className":"storeCmd command","val":"X"},{"className":"readCmd command","val":"Y"},{"className":"distanceCmd command","val":"T"},{"className":"storeCmd command","val":"B"},{"className":"modCmd command","val":"Y"},{"className":"storeCmd command","val":"R"},{"className":"pixelOutCmd command"}]`)
+
+
+// field of triangles and modulus
+
+loadFromJSON(`[{"className":"readCmd command","val":"X"},{"className":"addCmd command","val":"R"},{"className":"modCmd command","val":"Y"},{"className":"storeCmd command","val":"R"},{"className":"createCmd command","val":"255"},{"className":"subtractCmd command","val":"X"},{"className":"addCmd command","val":"B"},{"className":"modCmd command","val":"Y"},{"className":"storeCmd command","val":"B"},{"className":"createCmd command","val":"255"},{"className":"subtractCmd command","val":"Y"},{"className":"storeCmd command","val":"Y"},{"className":"pixelOutCmd command"}]`)
+
+
+// modulus mirror
+
+loadFromJSON(`[{"className":"createCmd command","val":"255"},{"className":"subtractCmd command","val":"Y"},{"className":"storeCmd command","val":"15"},{"className":"readCmd command","val":"X"},{"className":"addCmd command","val":"R"},{"className":"modCmd command","val":"Y"},{"className":"storeCmd command","val":"R"},{"className":"createCmd command","val":"255"},{"className":"subtractCmd command","val":"X"},{"className":"addCmd command","val":"B"},{"className":"modCmd command","val":"15"},{"className":"storeCmd command","val":"B"},{"className":"pixelOutCmd command"}]`)
+
+
+// open mod door
+
+loadFromJSON(`[{"className":"readCmd command","val":"X"},{"className":"distanceCmd command","val":"Y"},{"className":"subtractCmd command","val":"T"},{"className":"modCmd command","val":"X"},{"className":"multiplyCmd command","val":"Y"},{"className":"storeCmd command","val":"R"},{"className":"pixelOutCmd command"}]`)
+
+
+// salt and pepper plus a "warp"
+
+[{"className":"storeCmd command","val":"15"},{"className":"distanceCmd command","val":"X"},{"className":"storeCmd command","val":"B"},{"className":"createCmd command","val":"3"},{"className":"addCmd command","val":"15"},{"className":"modCmd command","val":"R"},{"className":"addCmd command","val":"T"},{"className":"storeCmd command","val":"R"},{"className":"pixelOutCmd command"}]

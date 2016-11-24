@@ -225,7 +225,7 @@ function fixJumpPaths(e) {
                 }
             }
             // sigmoid function
-            const curveSize = Math.max((2 / (1 + Math.pow(Math.E, -Math.abs(startY - endY) / 100)) - 1) * 450, startX + 34);
+            const curveSize = Math.max((2 / (1 + Math.pow(Math.E, -Math.abs(startY - endY) / 200)) - 1) * 450, startX + 34);
             let path = 'M' + startX + ' ' + startY + ' C' + curveSize + ' ' + startY + ' ' +
                 curveSize + ' ' + endY + ' 96 ' + endY;
             jumpPath.setAttributeNS(null, 'd', path);
@@ -368,13 +368,15 @@ function loadFromJSON(stringData) {
                 newCommand.id = 'jumpEnd' + cmd.jumpId;
             } else {
                 newCommand.id = 'jumpCmd' + cmd.jumpId;
+                createJumpPath(cmd.jumpId);
             }
             newCommand.dataset.jumpId = cmd.jumpId;
-            createJumpPath(cmd.jumpId);
+            nextJumpId = Math.max(nextJumpId, cmd.jumpId + 1);
         }
         program.appendChild(newCommand);
     }
     fixJumpPaths();
+    compileProgram();
 }
 
 function findJumpEndIdx(commands, id) {

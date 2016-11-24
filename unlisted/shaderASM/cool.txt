@@ -45,4 +45,9 @@ loadFromJSON(`[{"className":"readCmd command","val":"X"},{"className":"distanceC
 
 // salt and pepper plus a "warp"
 
-[{"className":"storeCmd command","val":"15"},{"className":"distanceCmd command","val":"X"},{"className":"storeCmd command","val":"B"},{"className":"createCmd command","val":"3"},{"className":"addCmd command","val":"15"},{"className":"modCmd command","val":"R"},{"className":"addCmd command","val":"T"},{"className":"storeCmd command","val":"R"},{"className":"pixelOutCmd command"}]
+loadFromJSON(`[{"className":"storeCmd command","val":"15"},{"className":"distanceCmd command","val":"X"},{"className":"storeCmd command","val":"B"},{"className":"createCmd command","val":"3"},{"className":"addCmd command","val":"15"},{"className":"modCmd command","val":"R"},{"className":"addCmd command","val":"T"},{"className":"storeCmd command","val":"R"},{"className":"pixelOutCmd command"}]`)
+
+
+// falling green buildings
+
+loadFromJSON(`[{"className":"addCmd command","val":"T"},{"className":"addCmd command","val":"X"},{"className":"storeCmd command","val":"G"},{"className":"distanceCmd command","val":"Y"},{"className":"storeCmd command","val":"B"},{"className":"pixelOutCmd command"}]`)

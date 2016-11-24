@@ -379,6 +379,35 @@ function loadFromJSON(stringData) {
     compileProgram();
 }
 
+function saveGif(numFrames, delay, quality) {
+    console.log('saveGif(numFrames, delay_in_ms, quality) // lower quality is better.');
+    numFrames = numFrames === undefined ? 30 : numFrames;
+    delay = delay === undefined ? 30 : delay;
+    quality = quality === undefined ? 1 : quality;
+    const cores = navigator.hardwareConcurrency || 1;
+
+    const gif = new GIF({
+        workers: Math.min(cores, 16),
+        quality: 1,
+        width: 256,
+        height: 256,
+        workerScript: 'vendor/gif.worker.js'
+    });
+
+    compileProgram();
+    cpu.reset();
+    while (numFrames-- > 0) {
+        cpu.nextFrame();
+        gif.addFrame(ctx, {copy: true, delay: delay});
+    }
+
+    gif.on('finished', function(blob) {
+        window.open(URL.createObjectURL(blob));
+    });
+
+    gif.render();
+}
+
 function findJumpEndIdx(commands, id) {
     const target = $('#jumpEnd' + id);
     let realIdx = 0;

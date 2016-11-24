@@ -36,7 +36,7 @@ function pixelVisionCPU(canvas) {
         //console.time('render time');
         // using var to help V8 not bail out!
         var x = 0;
-        var y = height;
+        var y = height - 1;
         var idx = 0;
         var err;
         cpuData.mem = new Uint8Array(cpuData.maxMem);

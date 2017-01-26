@@ -1,0 +1,196 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <meta charset="utf-8">
+    <meta name="viewport" content="width=device-width">
+    <title>Webcam Fractals</title>
+    <style>
+        body {
+            margin: 0;
+            padding: 0;
+            overflow: hidden;
+            background: #000000;
+        }
+        video {
+            margin: 0;
+            padding: 0;
+        }
+        #videos {
+            line-height: 0;
+            font-size: 0;
+            position: absolute;
+        }
+        .live1 {
+            -webkit-transform: rotateY(180deg);
+            transform: rotateY(180deg);
+        }
+        .live2 {
+            -webkit-transform: rotateX(180deg);
+            transform: rotateX(180deg);
+        }
+        .live3 {
+            -webkit-transform: rotateY(180deg) rotateX(180deg);
+            transform: rotateY(180deg) rotateX(180deg);
+        }
+    </style>
+</head>
+<body>
+    <div id="videos"></div>
+    <script>
+    // where i went to figure out this stuff:
+    // http://stackoverflow.com/questions/13120591/webrtc-how-to-get-the-webcam-data-as-a-stream-of-data
+    // http://stackoverflow.com/questions/667045/getpixel-from-html-canvas
+    // https://developer.mozilla.org/en-US/docs/Web/API/Navigator.getUserMedia
+
+    (function() {
+        'use strict';
+        function $(qry) {
+            return document.querySelectorAll(qry);
+        }
+
+        var numWidthWise = 6;
+
+        navigator.getMedia = (navigator.getUserMedia ||
+                           navigator.webkitGetUserMedia ||
+                           navigator.mozGetUserMedia ||
+                           navigator.msGetUserMedia);
+
+        if (!navigator.getMedia) {
+            alert('Needs better browser. Try Chrome.');
+            return;
+        }
+
+        var getWebcamResolution = function(cb) {
+            var vidEl = document.createElement('video');
+            vidEl.setAttribute('autoplay', '');
+            var getRes = function() {
+                vidEl.removeEventListener('playing', getRes, false);
+                cb({width: vidEl.videoWidth, height: vidEl.videoHeight});
+            };
+            vidEl.addEventListener('playing', getRes, false);
+            navigator.getMedia({video: true, audio: false}, function(stream) {
+                vidEl.src = window.URL.createObjectURL(stream);
+            }, function(err) {
+                console.log('The following error occured: ' + err);
+            });
+        };
+
+        getWebcamResolution(function(reso) {
+            var vidWidth = Math.floor(window.innerWidth / numWidthWise);
+            var vidHeight = Math.floor(vidWidth * (reso.height / reso.width));
+
+            var t = 0;
+            var videoHTML = '';
+            var videoRowHTML = '';
+
+            var numHeightWise = Math.ceil(window.innerHeight / vidHeight);
+
+            for (t = 0; t < numWidthWise; ++t) {
+                if (t % 2 === 0) {
+                    videoRowHTML += '<video class="live0" width="' + vidWidth + '" height="' +
+                        vidHeight + '" autoplay></video>';
+                } else {
+                    videoRowHTML += '<video class="live1" width="' + vidWidth + '" height="' +
+                        vidHeight + '" autoplay></video>';
+                }
+            }
+            videoRowHTML += '<br>';
+
+            var videoRow2HTML = (videoRowHTML.replace(/live0/gi, 'live2')).replace(/live1/gi, 'live3');
+
+            for (t = 0; t < numHeightWise; ++t) {
+                if (t % 2 === 0) {
+                    videoHTML += videoRowHTML;
+                } else {
+                    videoHTML += videoRow2HTML;
+                }
+            }
+
+            var videoDiv = $('#videos')[0];
+            videoDiv.innerHTML = videoHTML;
+            videoDiv.style.width = numWidthWise * vidWidth + 'px';
+
+            navigator.getMedia({video: true, audio: false}, function(stream) {
+                var videos = $('video');
+                var streamUrl = window.URL.createObjectURL(stream);
+                for (var t = 0; t < videos.length; ++t) {
+                    videos[t].src = streamUrl;
+                }
+            }, function(err) {
+                console.log('The following error occured: ' + err);
+            });
+
+            var keysDown = {};
+            var pos = {x: 0, y: 0};
+            var moveSpeed = 4;
+            var angle = 0;
+            var scale = 1.3;
+            var deltaScale = scale / 100;
+            var auto = true;
+            var keys = {
+                LEFT: 37,
+                UP: 38,
+                RIGHT: 39,
+                DOWN: 40,
+                A: 65,
+                D: 68,
+                W: 87,
+                S: 83,
+                P: 80
+            };
+
+            document.addEventListener('keydown', function(e) {
+                keysDown[e.which] = true;
+            });
+            document.addEventListener('keyup', function(e) {
+                keysDown[e.which] = false;
+                if (e.which === keys.P) {
+                    auto = !auto;
+                }
+            });
+
+            function update(t) {
+                if (keysDown[keys.LEFT]) {
+                    pos.x -= moveSpeed;
+                }
+                if (keysDown[keys.UP]) {
+                    pos.y -= moveSpeed;
+                }
+                if (keysDown[keys.RIGHT]) {
+                    pos.x += moveSpeed;
+                }
+                if (keysDown[keys.DOWN]) {
+                    pos.y += moveSpeed;
+                }
+                if (keysDown[keys.A]) {
+                    angle -= 1;
+                }
+                if (keysDown[keys.D]) {
+                    angle += 1;
+                }
+                if (keysDown[keys.W]) {
+                    scale += deltaScale;
+                }
+                if (keysDown[keys.S]) {
+                    scale -= deltaScale;
+                }
+                if (auto) {
+                    var sin = Math.sin;
+                    var cos = Math.cos;
+                    var x = t / 5000;
+                    angle += sin(x) * (sin(x) * sin(x) - 2 * cos(x) * cos(2 * x));
+                    x = t / 8000;
+                    scale += sin(x) * (sin(2 * x) * sin(x) - cos(2 * x)) / 200;
+                }
+                deltaScale = scale / 100;
+                videoDiv.style.left = pos.x + 'px';
+                videoDiv.style.top = pos.y + 'px';
+                videoDiv.style.transform = 'rotate(' + angle + 'deg) scale(' + scale + ')';
+                requestAnimationFrame(update);
+            }
+            update(0);
+        });
+    })();
+    </script>
+</body>
+</html>

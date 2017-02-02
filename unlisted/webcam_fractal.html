@@ -136,7 +136,7 @@
                 D: 68,
                 W: 87,
                 S: 83,
-                P: 80
+                U: 85
             };
 
             document.addEventListener('keydown', function(e) {
@@ -144,7 +144,7 @@
             });
             document.addEventListener('keyup', function(e) {
                 keysDown[e.which] = false;
-                if (e.which === keys.P) {
+                if (e.which === keys.U) {
                     auto = !auto;
                 }
             });
@@ -178,15 +178,13 @@
                     var sin = Math.sin;
                     var cos = Math.cos;
                     var x = t / 4000;
-                    //angle += sin(x) * (sin(x) * sin(x) - 2 * cos(x) * cos(2 * x));
                     angle += 0.1 * (sin(2.5 * sin(x)) - cos(x * 0.4) - sin(x * 0.4));
-                    x = t / 8000;
-                    scale += sin(x) * (sin(2 * x) * sin(x) - cos(2 * x)) / 500;
+                    scale = 0.25 * (-sin(x) + cos(0.4 * x)) + 2.25;
                 }
                 deltaScale = scale / 100;
                 videoDiv.style.left = pos.x + 'px';
                 videoDiv.style.top = pos.y + 'px';
-                videoDiv.style.transform = 'rotate(' + angle + 'deg) scale(' + scale + ')';
+                videoDiv.style.transform = 'rotate3d(0,0,1,' + angle + 'deg) scale(' + scale + ')';
                 videoDiv.style.filter = 'hue-rotate(' + (t / 150) + 'deg)';
                 requestAnimationFrame(update);
             }

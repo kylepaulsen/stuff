@@ -10,16 +10,17 @@
     First set a chunk size:<br>
     Chunk size (in seconds): <input id='chunk' value='0.125'><br><br>
     Now choose a file:<br>
-    <input type='file' id='file'><br><br>
+    <input type='file' id='file'> OR <button id="rec">Record from your microphone</button><br><br>
     <button id='play'>Play Again</button><br><br>
     <button id='save'>Save</button>
 
     <script>
         window.module = {};
     </script>
+    <script src="https://raw.githack.com/mattdiamond/Recorderjs/master/dist/recorder.js"></script>
     <script src="https://raw.githack.com/Jam3/audiobuffer-to-wav/master/index.js"></script>
     <script>
-        // hack to get commonjs module.
+        // hack to get this commonjs module.
         const bufferToWav = module.exports;
 
         const $ = document.querySelector.bind(document);
@@ -136,6 +137,42 @@
 
         $('#play').addEventListener('click', function() {
             play();
+        });
+
+        let recordingState = 'stopped';
+        let currentStream;
+        let rec;
+        const recordBtn = $('#rec');
+        recordBtn.addEventListener('click', function() {
+            if (recordingState === 'recording') {
+                recordingState = 'stopped';
+                currentStream.getTracks()[0].stop();
+                recordBtn.textContent = 'Record from your microphone';
+                rec.stop();
+                rec.getBuffer(function(buffers) {
+                    var newBuffer = ctx.createBuffer(buffers.length, buffers[0].length, ctx.sampleRate);
+                    for (let x = 0; x < buffers.length; x++) {
+                        newBuffer.getChannelData(x).set(buffers[x]);
+                    }
+                    play = function() {
+                        processBuffer(newBuffer);
+                    };
+                    play();
+                });
+            } else if (recordingState === 'stopped') {
+                recordingState = 'prepairing';
+                navigator.mediaDevices.getUserMedia({audio: true}).then(function(stream) {
+                    currentStream = stream;
+                    recordingState = 'recording';
+                    recordBtn.textContent = 'Stop recording';
+                    const source = ctx.createMediaStreamSource(stream);
+                    rec = new Recorder(source);
+                    rec.record();
+                }).catch(function(e) {
+                    console.log('Error recording!', e);
+                    recordingState = 'stopped';
+                });
+            }
         });
     </script>
 </body>

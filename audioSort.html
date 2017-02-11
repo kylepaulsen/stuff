@@ -10,7 +10,7 @@
     First set a chunk size:<br>
     Chunk size (in seconds): <input id='chunk' value='0.125'><br><br>
     Now choose a file:<br>
-    <input type='file' id='file'> OR <button id="rec">Record from your microphone</button><br><br>
+    <input type='file' id='file'> OR <button id="rec" style="width: 200px;">Record from your microphone</button><br><br>
     <button id='play'>Play Again</button><br><br>
     <button id='save'>Save</button>
 
@@ -26,8 +26,8 @@
         const $ = document.querySelector.bind(document);
         const fileSelect = $('#file');
 
-        const sampleRate = 44100;
         const ctx = new AudioContext();
+        let sampleRate = 44100;
 
         function changePCM(data) {
             // just reverse it
@@ -121,6 +121,7 @@
 
         fileSelect.addEventListener('change', function(e) {
             const file = e.target.files[0];
+            sampleRate = 44100;
             const context = new OfflineAudioContext(2, 1, sampleRate);
 
             const reader = new FileReader();
@@ -150,11 +151,12 @@
                 recordBtn.textContent = 'Record from your microphone';
                 rec.stop();
                 rec.getBuffer(function(buffers) {
-                    var newBuffer = ctx.createBuffer(buffers.length, buffers[0].length, ctx.sampleRate);
-                    for (let x = 0; x < buffers.length; x++) {
-                        newBuffer.getChannelData(x).set(buffers[x]);
-                    }
                     play = function() {
+                        sampleRate = ctx.sampleRate;
+                        var newBuffer = ctx.createBuffer(buffers.length, buffers[0].length, ctx.sampleRate);
+                        for (let x = 0; x < buffers.length; x++) {
+                            newBuffer.getChannelData(x).set(buffers[x]);
+                        }
                         processBuffer(newBuffer);
                     };
                     play();

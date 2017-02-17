@@ -340,7 +340,7 @@
 
                 var estimatedPitch = -1;
                 var acceptedError = 0.2;
-                var maxConfidence = 5;
+                var maxConfidence = 10;
 
                 if (pitch !== -1) {
                     // I have a pitch here
@@ -441,13 +441,17 @@
                 SAMP_RATE = samplerate;
             }
 
+            function js_getconfidence() {
+                return pitchtracker._pitchConfidence;
+            }
+
             return {
                 neededSampleCount: dywapitch_neededsamplecount,
                 initTracking: js_inittracking,
                 computePitch: js_computepitch,
-                setSampleRate: js_setsamplerate
+                setSampleRate: js_setsamplerate,
+                getConfidence: js_getconfidence
             };
-
         })();
     </script>
 
@@ -553,15 +557,15 @@
                 const samples = e.inputBuffer.getChannelData(0);
                 let pitch = waveletPitch.computePitch(samples, 0, samples.length);
 
-                if (pitch) {
+                if (pitch && waveletPitch.getConfidence() > 3) {
                     const note = getNote(pitch);
                     noteContainer.textContent = note;
                     updateImage(pitch);
-                    console.log('Found a pitch:', pitch, 'note:', note);
+                    console.log("Found a pitch:", pitch, "note:", note, "confidence:", waveletPitch.getConfidence());
                 } else {
                     noteContainer.textContent = "?";
                     updateImage(0);
-                    console.log('No pitch found!');
+                    console.log("No pitch found!");
                 }
             };
 

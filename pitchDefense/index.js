@@ -351,6 +351,9 @@
 
         source.connect(node);
         node.connect(audioContext.destination);
+    }).catch(function() {
+        alert('Sorry... This game requires a microphone.');
+        gameState = 'unplayable';
     });
 
     function playFreq(freq) {

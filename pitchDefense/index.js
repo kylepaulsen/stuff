@@ -19,7 +19,7 @@
     const noteStrings = ['C', 'C#', 'D', 'D#', 'E', 'F', 'F#', 'G', 'G#', 'A', 'A#', 'B'];
     const freqs = [261.63, 277.18, 293.66, 311.13, 329.63, 349.23, 369.99, 392, 415.30, 440, 466.16, 493.88];
 
-    let gameState = 'menu';
+    let gameState = 'micSetup';
     let playPitchHint = true;
     let maxRocketWaitTime = 7000;
     let rocketWaitTime = maxRocketWaitTime;
@@ -114,6 +114,8 @@
                 fireRocket();
                 yield sleep(rocketWaitTime);
             }
+        } else if (gameState === 'micSetup') {
+            alert('Please grant this page microphone access.');
         }
     });
 
@@ -355,6 +357,7 @@
 
             source.connect(node);
             node.connect(audioContext.destination);
+            gameState = 'menu';
         }).catch(function() {
             alert('Sorry... This game requires a microphone.');
             gameState = 'unplayable';

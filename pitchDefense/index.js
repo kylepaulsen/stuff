@@ -213,14 +213,14 @@
             emitter.start(false, 500, 50);
             rocket.addChild(emitter);
 
-            rocket.explode = async function() {
+            rocket.explode = co.wrap(function*() {
                 if (!rocket.exploding) {
                     rocket.exploding = true;
                     createExplosion(rocket.x, rocket.y, 300);
-                    await sleep(300);
+                    yield sleep(300);
                     rocket.kill();
                 }
-            };
+            });
 
             const graphics = game.add.graphics(-25, -60);
             rocket.addChild(graphics);
@@ -250,8 +250,6 @@
         }, this);
 
         soundWaves = game.add.graphics(0, 0);
-        soundWaves.lineStyle(10, 0xFFFFFF, 0.3);
-
         explosions = game.add.group();
 
         setUpMicrophone();
@@ -276,7 +274,7 @@
                         rocket.explode();
 
                         rocketWaitTime = Math.max(1000, maxRocketWaitTime - score * 15);
-                        if (score > 700) {
+                        if (score > 500) {
                             playPitchHint = false;
                         }
                     }
@@ -289,16 +287,16 @@
 
     function render() {
         soundWaves.clear();
-        soundWaves.lineStyle(5, 0xFFFFFF, 0.05);
-        soundWaveDiameters.forEach(function(diameter, idx, arr) {
-            soundWaves.drawCircle(width / 2, 546, diameter);
-        });
-        soundWaves.lineStyle(10, 0xFFFFFF, 0.1);
-        soundWaveDiameters.forEach(function(diameter, idx, arr) {
-            soundWaves.drawCircle(width / 2, 632, diameter);
-            arr[idx] += 10;
-        });
-        soundWaveDiameters = soundWaveDiameters.filter(function(diameter) {
+        soundWaveDiameters = soundWaveDiameters.map(function(diameter, idx, arr) {
+            const x = width / 2;
+            soundWaves.lineStyle(5, 0xFFFFFF, 0.05);
+            soundWaves.drawCircle(x, 546, diameter);
+            soundWaves.lineStyle(10, 0xFFFFFF, 0.1);
+            soundWaves.drawCircle(x, 632, diameter);
+            const newVal = diameter + 10;
+            arr[idx] = newVal;
+            return newVal;
+        }).filter(function(diameter) {
             return diameter < 1400;
         });
     }

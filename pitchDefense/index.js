@@ -6,6 +6,7 @@
     const rad2ang = 180 / Math.PI;
     let game;
 
+    let audioContext;
     let bg;
     let rockets;
     let explosions;
@@ -250,6 +251,8 @@
         soundWaves.lineStyle(10, 0xFFFFFF, 0.3);
 
         explosions = game.add.group();
+
+        setUpMicrophone();
     }
 
     function update() {
@@ -304,11 +307,6 @@
 
     // Audio Stuff
 
-    const audioContext = new AudioContext();
-
-    const lowestPitch = 40; //in hz.
-    const targetBufferSize = waveletPitch.neededSampleCount(lowestPitch);
-
     const getNote = (function() {
         const A4 = 440;
         const r = -12 / Math.log(2);
@@ -325,36 +323,43 @@
         };
     })();
 
-    waveletPitch.setSampleRate(audioContext.sampleRate);
-    navigator.mediaDevices.getUserMedia({audio: true}).then(function(stream) {
-        const source = audioContext.createMediaStreamSource(stream);
-        const node = audioContext.createScriptProcessor(targetBufferSize, 2, 2);
-        let soundWaveTime = 0;
-        node.onaudioprocess = function(e) {
-            const samples = e.inputBuffer.getChannelData(0);
-            let pitch = waveletPitch.computePitch(samples, 0, samples.length);
+    function setUpMicrophone() {
+        audioContext = new AudioContext();
 
-            const confidence = waveletPitch.getConfidence();
-            if (pitch && confidence > 3) {
-                currentSingingNote = getNote(pitch);
-                const now = Date.now();
-                if (now - soundWaveTime > 333 && confidence > 5 && gameState === 'playing') {
-                    soundWaveDiameters.push(10);
-                    soundWaveTime = now;
+        const lowestPitch = 40; //in hz.
+        const targetBufferSize = waveletPitch.neededSampleCount(lowestPitch);
+
+        waveletPitch.setSampleRate(audioContext.sampleRate);
+        navigator.mediaDevices.getUserMedia({audio: true}).then(function(stream) {
+            const source = audioContext.createMediaStreamSource(stream);
+            const node = audioContext.createScriptProcessor(targetBufferSize, 2, 2);
+            let soundWaveTime = 0;
+            node.onaudioprocess = function(e) {
+                const samples = e.inputBuffer.getChannelData(0);
+                let pitch = waveletPitch.computePitch(samples, 0, samples.length);
+
+                const confidence = waveletPitch.getConfidence();
+                if (pitch && confidence > 3) {
+                    currentSingingNote = getNote(pitch);
+                    const now = Date.now();
+                    if (now - soundWaveTime > 333 && confidence > 5 && gameState === 'playing') {
+                        soundWaveDiameters.push(10);
+                        soundWaveTime = now;
+                    }
+                    //console.log('Found a pitch:', pitch, 'note:', currentSingingNote,
+                        //'confidence:', waveletPitch.getConfidence());
+                } else {
+                    currentSingingNote = undefined;
                 }
-                //console.log('Found a pitch:', pitch, 'note:', currentSingingNote,
-                    //'confidence:', waveletPitch.getConfidence());
-            } else {
-                currentSingingNote = undefined;
-            }
-        };
+            };
 
-        source.connect(node);
-        node.connect(audioContext.destination);
-    }).catch(function() {
-        alert('Sorry... This game requires a microphone.');
-        gameState = 'unplayable';
-    });
+            source.connect(node);
+            node.connect(audioContext.destination);
+        }).catch(function() {
+            alert('Sorry... This game requires a microphone.');
+            gameState = 'unplayable';
+        });
+    }
 
     function playFreq(freq) {
         var oscillator = audioContext.createOscillator();
@@ -364,5 +369,4 @@
         oscillator.start();
         oscillator.stop(audioContext.currentTime + 1);
     }
-
 })();

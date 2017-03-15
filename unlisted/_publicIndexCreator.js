@@ -87,7 +87,9 @@ try {
     currentList = [];
 }
 
-const linkableFiles = publicFiles.filter(filterFiles);
+const linkableFiles = publicFiles.filter(filterFiles).sort(function(a, b) {
+    return 2 * (b.toLowerCase() < a.toLowerCase()) - 1;
+});
 
 let linksHTML = '';
 let madeChange = false;

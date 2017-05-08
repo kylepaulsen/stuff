@@ -92,7 +92,6 @@
 
     <script>
         const ui = {};
-        const $ = document.querySelector.bind(document);
 
         let voices = [];
         speechSynthesis.onvoiceschanged = function() {
@@ -174,30 +173,27 @@
         function addExercise(name, seconds) {
             const div = document.createElement('div');
             div.className = 'exercise';
-            div.innerHTML = exerciseTemplate.replace('{name}', name || '')
+            div.innerHTML = exerciseTemplate.replace('{name}', name.replace(/'/g, '&#39;') || '')
                 .replace('{seconds}', seconds || 30);
 
             ui.exercises.appendChild(div);
         }
 
         let lastMsg;
-        function primeSpeechSynthesis(msg) {
-            if (msg !== lastMsg) {
-                lastMsg = msg;
-                const primeMsg = new SpeechSynthesisUtterance('a');
-                primeMsg.rate = 10;
-                primeMsg.volume = 0;
-                window.speechSynthesis.speak(primeMsg);
-            }
+        function primeSpeechSynthesis() {
+            say('z', 2, true);
         }
 
-        function say(msg, speed) {
+        function say(msg, speed, mute) {
             if (msg !== lastMsg) {
                 lastMsg = msg;
                 let speakIt = new SpeechSynthesisUtterance(msg);
                 speakIt.rate = speed || 1;
                 speakIt.voice = voices[ui.voiceSelect.selectedIndex];
                 speakIt.pitch = 1;
+                if (mute) {
+                    speakIt.volume = 0;
+                }
                 window.speechSynthesis.speak(speakIt);
             }
         }
@@ -219,25 +215,18 @@
                 exercises[currentExerciseIdx].seconds > 7) {
                 say('Halfway done!');
             } else if (time === 4) {
-                primeSpeechSynthesis(4);
+                primeSpeechSynthesis();
             } else if (time < 4 && time > 0) {
                 say(time, 1.5);
             } else if (time === 0) {
                 if (currentExerciseIdx === 0) {
                     say('Start Workout');
                 } else {
-                    if (currentExerciseIdx === exercises.length - 1) {
+                    if (currentExerciseIdx >= exercises.length - 1) {
                         say('Workout complete!');
                         stopWorkout();
                     } else if (isExercise) {
-                        say('Now rest!');
-
-                        setTimeout(function() {
-                            const name = exercises[currentExerciseIdx + 1].name;
-                            if (name !== 'Rest') {
-                                say('Up next, ' + name);
-                            }
-                        }, 1000);
+                        say(`Now rest! Up next, ${exercises[currentExerciseIdx + 2].name}`);
                     } else {
                         say('Go!');
                     }

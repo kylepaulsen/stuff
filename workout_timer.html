@@ -48,6 +48,9 @@
         text-align: center;
         flex: 0 0 10%;
     }
+    .nameInput {
+        width: 300px;
+    }
     .btn {
         cursor: pointer;
         min-width: 120px;
@@ -71,6 +74,7 @@
     <button id='deleteWorkoutBtn' class='btn'>Delete Workout</button>
     <select id='loadWorkoutSelect'></select><br>
     <button id='startWorkoutBtn' class='btn'>Start Workout</button>
+    Voice: <select id='voiceSelect'></select>
     <div id='overlay'></div>
     <div id='workoutContainer'>
         <div class='vflex'>
@@ -90,7 +94,18 @@
         const ui = {};
         const $ = document.querySelector.bind(document);
 
-        const voices = speechSynthesis.getVoices();
+        let currentVoiceIdx = 0;
+        let voices = [];
+        speechSynthesis.onvoiceschanged = function() {
+            if (voices.length === 0) {
+                voices = speechSynthesis.getVoices();
+                voices.forEach(function(v) {
+                    const opt = document.createElement('option');
+                    opt.innerHTML = v.name;
+                    ui.voiceSelect.appendChild(opt);
+                });
+            }
+        };
 
         const allIds = document.querySelectorAll('[id]');
         for (let x = 0; x < allIds.length; x++) {
@@ -98,7 +113,7 @@
         }
 
         const exerciseTemplate = `
-        Name: <input class='nameInput' value='{name}'>
+        Name: <input class='nameInput' class='nameInput' value='{name}'>
         Seconds: <input class='secondsInput' value='{seconds}' type='number'>
         <button class='removeExerciseBtn'>Remove</button>
         `;
@@ -179,8 +194,8 @@
                 lastMsg = msg;
                 let speakIt = new SpeechSynthesisUtterance(msg);
                 speakIt.rate = speed || 1;
-                speakIt.voice = voices[6];
-                speakIt.pitch = 2;
+                speakIt.voice = voices[currentVoiceIdx];
+                speakIt.pitch = 1;
                 window.speechSynthesis.speak(speakIt);
             }
         }
@@ -203,7 +218,7 @@
             } else if (time === 4) {
                 primeSpeechSynthesis(4);
             } else if (time < 4 && time > 0) {
-                say(time, 3);
+                say(time, 1.5);
             } else if (time === 0) {
                 if (currentExerciseIdx === 0) {
                     say('Start Workout');
@@ -288,7 +303,7 @@
             currentExerciseIdx = -1;
             nextExercise();
 
-            say('First up, ' + exercises[1].name, 2);
+            say('First up, ' + exercises[1].name);
             worker.addEventListener('message', updateTime);
         }
 
@@ -315,6 +330,9 @@
         ui.loadWorkoutSelect.addEventListener('change', loadWorkout);
         ui.saveWorkoutBtn.addEventListener('click', saveWorkout);
         ui.deleteWorkoutBtn.addEventListener('click', deleteWorkout);
+        ui.voiceSelect.addEventListener('click', function() {
+            currentVoiceIdx = ui.voiceSelect.selectedIndex;
+        });
 
         addExercise('Jumping Jacks', 30);
         addExercise('Wall Sit', 30);

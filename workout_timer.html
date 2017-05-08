@@ -94,14 +94,16 @@
         const ui = {};
         const $ = document.querySelector.bind(document);
 
-        let currentVoiceIdx = 0;
         let voices = [];
         speechSynthesis.onvoiceschanged = function() {
             if (voices.length === 0) {
                 voices = speechSynthesis.getVoices();
-                voices.forEach(function(v) {
+                voices.forEach(function(v, i) {
                     const opt = document.createElement('option');
                     opt.innerHTML = v.name;
+                    if (v.name.indexOf('US English') > -1) {
+                        opt.setAttribute('selected', 'selected');
+                    }
                     ui.voiceSelect.appendChild(opt);
                 });
             }
@@ -194,7 +196,7 @@
                 lastMsg = msg;
                 let speakIt = new SpeechSynthesisUtterance(msg);
                 speakIt.rate = speed || 1;
-                speakIt.voice = voices[currentVoiceIdx];
+                speakIt.voice = voices[ui.voiceSelect.selectedIndex];
                 speakIt.pitch = 1;
                 window.speechSynthesis.speak(speakIt);
             }
@@ -213,7 +215,8 @@
             ui.currentExerciseTime.textContent = time;
 
             const isExercise = currentExerciseIdx % 2 === 1;
-            if (time === Math.floor(exercises[currentExerciseIdx].seconds / 2) && isExercise) {
+            if (time === Math.floor(exercises[currentExerciseIdx].seconds / 2) && isExercise &&
+                exercises[currentExerciseIdx].seconds > 7) {
                 say('Halfway done!');
             } else if (time === 4) {
                 primeSpeechSynthesis(4);
@@ -261,10 +264,14 @@
         function nextExercise() {
             currentExerciseIdx++;
             const currentExercise = exercises[currentExerciseIdx];
+            let nextUp = '';
+            if (currentExercise.name === 'Rest' || currentExercise.name === 'Get Ready') {
+                nextUp = ` (Next up: ${exercises[currentExerciseIdx + 1].name})`;
+            }
             if (currentExercise) {
                 timerTimestamp = Date.now();
                 timerLength = currentExercise.seconds;
-                ui.currentExerciseName.textContent = currentExercise.name;
+                ui.currentExerciseName.textContent = currentExercise.name + nextUp;
                 ui.currentExerciseTime.textContent = currentExercise.seconds;
             }
         }
@@ -303,7 +310,7 @@
             currentExerciseIdx = -1;
             nextExercise();
 
-            say('First up, ' + exercises[1].name);
+            say(`First up, ${exercises[1].name}`);
             worker.addEventListener('message', updateTime);
         }
 
@@ -330,9 +337,6 @@
         ui.loadWorkoutSelect.addEventListener('change', loadWorkout);
         ui.saveWorkoutBtn.addEventListener('click', saveWorkout);
         ui.deleteWorkoutBtn.addEventListener('click', deleteWorkout);
-        ui.voiceSelect.addEventListener('click', function() {
-            currentVoiceIdx = ui.voiceSelect.selectedIndex;
-        });
 
         addExercise('Jumping Jacks', 30);
         addExercise('Wall Sit', 30);

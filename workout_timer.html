@@ -1,7 +1,12 @@
 <html>
 <head>
     <title>Workout Timer</title>
+    <meta name='viewport' content='width=device-width, initial-scale=1.0'>
     <style>
+    body {
+        margin: 0;
+        padding: 6px 0 6px 6px;
+    }
     #workoutContainer {
         display: none;
         position: absolute;
@@ -27,29 +32,50 @@
         text-align: center;
         font-size: 40px;
     }
+    @media (max-width: 600px) {
+        #currentExerciseName {
+            font-size: 26px;
+        }
+    }
     #stopWorkoutBtn {
         margin-top: 0;
+    }
+    #loadWorkoutSelect {
+        margin-top: 10px;
+    }
+    #screenLockVid {
+        display: none;
+    }
+    .sit {
+        flex: 0 1 auto;
+    }
+    .sit2 {
+        flex: 0 1 144px;
+    }
+    .fill {
+        flex: 1 1 auto;
+        padding: 0 6px;
     }
     .vflex {
         display: flex;
         flex-direction: column;
     }
     .workoutContainerTop {
-        flex: 0 0 10%;
+        flex: 0 0 20%;
     }
     .workoutContainerMiddle {
         display: flex;
         justify-content: center;
         align-items: center;
         font-size: 160px;
-        flex: 1 1 80%;
+        flex: 1 1 70%;
     }
     .workoutContainerBottom {
         text-align: center;
         flex: 0 0 10%;
     }
     .nameInput {
-        width: 300px;
+        width: 100%;
     }
     .btn {
         cursor: pointer;
@@ -59,6 +85,8 @@
     }
     .exercise {
         margin-top: 10px;
+        display: flex;
+        width: 100%;
     }
     .secondsInput {
         width: 50px;
@@ -74,6 +102,7 @@
     <button id='deleteWorkoutBtn' class='btn'>Delete Workout</button>
     <select id='loadWorkoutSelect'></select><br>
     <button id='startWorkoutBtn' class='btn'>Start Workout</button>
+    <br><br>
     Voice: <select id='voiceSelect'></select>
     <div id='overlay'></div>
     <div id='workoutContainer'>
@@ -89,6 +118,11 @@
             </div>
         </div>
     </div>
+    <video id='screenLockVid' width='1' loop muted>
+        <source
+            src='data:video/mp4;base64,AAAAGGZ0eXBtcDQyAAAAAG1wNDFpc29tAAAAJ3V1aWRcpwj7Mo5CBahhZQ7KCpWWAAAACzYuMi4wOTIwMC4wAAABVm1kYXQAAAAAAAAAEAAAAAIJEAAAADMGBS8C+GFQ/HBBcrcySPOnKj00TWljcm9zb2Z0IEguMjY0IEVuY29kZXIgVjEuNS4zAIAAAADnBgXjy7ITkphzQ9qopsdCmDVs9XNyYzozIGg6NjQgdzo2NCBmcHM6MS4wMDAgcGY6NjYgbHZsOjEgYjowIGJxcDozIGdvcDozIGlkcjozIHNsYzoxIGNtcDowIHJjOjEgcXA6MjYgcmF0ZToxMDAwMDAgcGVhazowIGJ1ZmY6Mzc1MDAgcmVmOjIgc3JjaDozMiBhc3JjaDoxIHN1YnA6MSBwYXI6NiAzIDMgcm5kOjAgY2FiYWM6MCBscDoyIGN0bnQ6MCBhdWQ6MSBsYXQ6MCB3cms6NCB2dWk6MSBseXI6MSA8PACAAAAAGmWIgEv///D0UAAQI/eK331itddddddddddeAAACrW1vb3YAAABsbXZoZAAAAADVNz8p1Tc/KQAAA+gAAAPoAAEAAAEAAAAAAAAAAAAAAAABAAAAAAAAAAAAAAAAAAAAAQAAAAAAAAAAAAAAAAAAQAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAIAAAH1dHJhawAAAFx0a2hkAAAAAdU3PynVNz8pAAAAAQAAAAAAAAPoAAAAAAAAAAAAAAAAAAAAAAABAAAAAAAAAAAAAAAAAAAAAQAAAAAAAAAAAAAAAAAAQAAAAABAAAAAQAAAAAABkW1kaWEAAAAgbWRoZAAAAADVNz8p1Tc/KQAAA+gAAAPoVcQAAAAAAC1oZGxyAAAAAAAAAAB2aWRlAAAAAAAAAAAAAAAAVmlkZW9IYW5kbGVyAAAAATxtaW5mAAAAFHZtaGQAAAABAAAAAAAAAAAAAAAkZGluZgAAABxkcmVmAAAAAAAAAAEAAAAMdXJsIAAAAAEAAAD8c3RibAAAAJRzdHNkAAAAAAAAAAEAAACEYXZjMQAAAAAAAAABAAAAAAAAAAAAAAAAAAAAAABAAEAASAAAAEgAAAAAAAAAAQpBVkMgQ29kaW5nAAAAAAAAAAAAAAAAAAAAAAAAAAAAABj//wAAAC5hdmNDAULQC//hABdnQtALlbEJoQAAAwABAAADAAINoIhG4AEABGjKjyAAAAAYc3R0cwAAAAAAAAABAAAAAQAAA+gAAAAcc3RzYwAAAAAAAAABAAAAAQAAAAEAAAABAAAAGHN0c3oAAAAAAAAAAAAAAAEAAAFGAAAAFHN0Y28AAAAAAAAAAQAAAE8AAABEdWR0YQAAADRtZXRhAAAAAAAAACBoZGxyAAAAAAAAAABtZGlyAAAAAAAAAAAAAAAAAAAACGlsc3QAAAAIWHRyYQ=='
+            type='video/mp4'>
+    </video>
 
     <script>
         const ui = {};
@@ -100,7 +134,7 @@
                 voices.forEach(function(v, i) {
                     const opt = document.createElement('option');
                     opt.innerHTML = v.name;
-                    if (v.name.indexOf('US English') > -1) {
+                    if (v.name.toLowerCase().indexOf('english') > -1) {
                         opt.setAttribute('selected', 'selected');
                     }
                     ui.voiceSelect.appendChild(opt);
@@ -114,9 +148,10 @@
         }
 
         const exerciseTemplate = `
-        Name: <input class='nameInput' class='nameInput' value='{name}'>
-        Seconds: <input class='secondsInput' value='{seconds}' type='number'>
-        <button class='removeExerciseBtn'>Remove</button>
+        <div class='sit'>Name: </div>
+        <div class='fill'><input class='nameInput' class='nameInput' value='{name}'></div>
+        <div class='sit2'>Time: <input class='secondsInput' value='{seconds}' type='number'>
+        <button class='removeExerciseBtn'>×</button></div>
         `;
 
         let allSavedWorkouts = JSON.parse(localStorage.savedWorkouts || '[]');
@@ -299,11 +334,13 @@
             currentExerciseIdx = -1;
             nextExercise();
 
+            ui.screenLockVid.play();
             say(`First up, ${exercises[1].name}`);
             worker.addEventListener('message', updateTime);
         }
 
         function stopWorkout() {
+            ui.screenLockVid.pause();
             ui.workoutContainer.style.display = 'none';
             ui.overlay.style.display = 'none';
             worker.removeEventListener('message', updateTime);
@@ -313,7 +350,7 @@
         window.addEventListener('click', function(e) {
             const target = e.target;
             if (target.className === 'removeExerciseBtn') {
-                const exercise = target.parentNode;
+                const exercise = target.parentNode.parentNode;
                 ui.exercises.removeChild(exercise);
             }
         })

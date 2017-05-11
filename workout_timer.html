@@ -1,7 +1,7 @@
 <html>
 <head>
     <title>Workout Timer</title>
-    <meta name='viewport' content='width=device-width, initial-scale=1.0'>
+    <meta name='viewport' content='width=device-width, initial-scale=1.0, user-scalable=no'>
     <style>
     body {
         margin: 0;
@@ -118,29 +118,36 @@
             </div>
         </div>
     </div>
-    <video id='screenLockVid' width='1' loop muted>
+    <video id='screenLockVid' width='1' loop muted playsinline>
         <source
             src='data:video/mp4;base64,AAAAGGZ0eXBtcDQyAAAAAG1wNDFpc29tAAAAJ3V1aWRcpwj7Mo5CBahhZQ7KCpWWAAAACzYuMi4wOTIwMC4wAAABVm1kYXQAAAAAAAAAEAAAAAIJEAAAADMGBS8C+GFQ/HBBcrcySPOnKj00TWljcm9zb2Z0IEguMjY0IEVuY29kZXIgVjEuNS4zAIAAAADnBgXjy7ITkphzQ9qopsdCmDVs9XNyYzozIGg6NjQgdzo2NCBmcHM6MS4wMDAgcGY6NjYgbHZsOjEgYjowIGJxcDozIGdvcDozIGlkcjozIHNsYzoxIGNtcDowIHJjOjEgcXA6MjYgcmF0ZToxMDAwMDAgcGVhazowIGJ1ZmY6Mzc1MDAgcmVmOjIgc3JjaDozMiBhc3JjaDoxIHN1YnA6MSBwYXI6NiAzIDMgcm5kOjAgY2FiYWM6MCBscDoyIGN0bnQ6MCBhdWQ6MSBsYXQ6MCB3cms6NCB2dWk6MSBseXI6MSA8PACAAAAAGmWIgEv///D0UAAQI/eK331itddddddddddeAAACrW1vb3YAAABsbXZoZAAAAADVNz8p1Tc/KQAAA+gAAAPoAAEAAAEAAAAAAAAAAAAAAAABAAAAAAAAAAAAAAAAAAAAAQAAAAAAAAAAAAAAAAAAQAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAIAAAH1dHJhawAAAFx0a2hkAAAAAdU3PynVNz8pAAAAAQAAAAAAAAPoAAAAAAAAAAAAAAAAAAAAAAABAAAAAAAAAAAAAAAAAAAAAQAAAAAAAAAAAAAAAAAAQAAAAABAAAAAQAAAAAABkW1kaWEAAAAgbWRoZAAAAADVNz8p1Tc/KQAAA+gAAAPoVcQAAAAAAC1oZGxyAAAAAAAAAAB2aWRlAAAAAAAAAAAAAAAAVmlkZW9IYW5kbGVyAAAAATxtaW5mAAAAFHZtaGQAAAABAAAAAAAAAAAAAAAkZGluZgAAABxkcmVmAAAAAAAAAAEAAAAMdXJsIAAAAAEAAAD8c3RibAAAAJRzdHNkAAAAAAAAAAEAAACEYXZjMQAAAAAAAAABAAAAAAAAAAAAAAAAAAAAAABAAEAASAAAAEgAAAAAAAAAAQpBVkMgQ29kaW5nAAAAAAAAAAAAAAAAAAAAAAAAAAAAABj//wAAAC5hdmNDAULQC//hABdnQtALlbEJoQAAAwABAAADAAINoIhG4AEABGjKjyAAAAAYc3R0cwAAAAAAAAABAAAAAQAAA+gAAAAcc3RzYwAAAAAAAAABAAAAAQAAAAEAAAABAAAAGHN0c3oAAAAAAAAAAAAAAAEAAAFGAAAAFHN0Y28AAAAAAAAAAQAAAE8AAABEdWR0YQAAADRtZXRhAAAAAAAAACBoZGxyAAAAAAAAAABtZGlyAAAAAAAAAAAAAAAAAAAACGlsc3QAAAAIWHRyYQ=='
             type='video/mp4'>
     </video>
 
     <script>
+    (function() {
         const ui = {};
 
         let voices = [];
-        speechSynthesis.onvoiceschanged = function() {
+
+        function checkForVoices() {
             if (voices.length === 0) {
                 voices = speechSynthesis.getVoices();
-                voices.forEach(function(v, i) {
-                    const opt = document.createElement('option');
-                    opt.innerHTML = v.name;
-                    if (v.name.toLowerCase().indexOf('english') > -1) {
-                        opt.setAttribute('selected', 'selected');
-                    }
-                    ui.voiceSelect.appendChild(opt);
-                });
+                if (voices.length > 0) {
+                    voices.forEach(function(v, i) {
+                        const opt = document.createElement('option');
+                        const name = `${v.name} (${v.lang})`;
+                        opt.innerHTML = name;
+                        if (name.toLowerCase().search(/en[\-_ ]us/i) > -1) {
+                            opt.setAttribute('selected', 'selected');
+                        }
+                        ui.voiceSelect.appendChild(opt);
+                    });
+                    clearInterval(checkForVoicesIntervalId);
+                }
             }
-        };
+        }
+        const checkForVoicesIntervalId = setInterval(checkForVoices, 100);
 
         const allIds = document.querySelectorAll('[id]');
         for (let x = 0; x < allIds.length; x++) {
@@ -326,6 +333,7 @@
         }
 
         function startWorkout() {
+            document.body.scrollTop = 0;
             ui.workoutContainer.style.display = 'block';
             ui.overlay.style.display = 'block';
 
@@ -376,7 +384,7 @@
         addExercise('Lunge', 30);
         addExercise('Push up and Rotation', 30);
         addExercise('Side Plank', 30);
-
+    })();
     </script>
 </body>
 </html>

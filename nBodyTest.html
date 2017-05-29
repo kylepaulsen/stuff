@@ -107,7 +107,10 @@
 
         let objects = [];
 
+        let playerObject;
+        let mostMass;
         pub.reset = function() {
+            mostMass = 0;
             ctx.clearRect(0, 0, width, height);
             objects = [];
 
@@ -121,8 +124,26 @@
             }
             // star
             objects.push(makeObject(width / 2, height / 2, 0, 0, 3000, 0));
+
+            playerObject = makeObject(100, 100, 0, 0, 100);
+            playerObject.player = true;
+            objects.push(playerObject);
+
+            for (let x = 0; x < objects.length; x++) {
+                mostMass = Math.max(mostMass, objects[x].mass);
+            }
         };
         pub.reset();
+
+        const keysDown = {};
+        window.addEventListener('keydown', function(e) {
+            keysDown[e.keyCode] = true;
+        });
+
+        window.addEventListener('keyup', function(e) {
+            keysDown[e.keyCode] = false;
+        });
+        const playerSpeed = 0.1;
 
         function render() {
             const now = Date.now();
@@ -131,6 +152,19 @@
                 return;
             }
             lastFrameTime = now;
+
+            if (keysDown[37]) {
+                playerObject.xv -= playerSpeed;
+            }
+            if (keysDown[38]) {
+                playerObject.yv -= playerSpeed;
+            }
+            if (keysDown[39]) {
+                playerObject.xv += playerSpeed;
+            }
+            if (keysDown[40]) {
+                playerObject.yv += playerSpeed;
+            }
 
             if (pub.tails) {
                 const fade = (11 - pub.tailLength) / 100;
@@ -146,10 +180,14 @@
             for (let x = 0; x < numObjects; x++) {
                 const object = objects[x];
                 if (pub.colors) {
-                    const colorVal = Math.floor(255 - 255 * Math.min(object.mass / 2000, 1));
+                    const colorVal = Math.floor(255 - 255 * object.mass / mostMass);
                     ctx.fillStyle = 'rgba(255, ' + colorVal + ', ' + colorVal + ', 1)';
                 } else {
                     ctx.fillStyle = '#ffffff';
+                }
+                if (object.player) {
+                    const colorVal = Math.floor(255 - 255 * object.mass / mostMass);
+                    ctx.fillStyle = 'rgba(' + colorVal + ', ' + colorVal + ', 255, 1)';
                 }
                 ctx.fillRect(object.x - 1, object.y - 1, 3, 3);
                 for (let t = x + 1; t < numObjects; t++) {
@@ -159,23 +197,27 @@
 
                     if (Math.abs(xDiff) < 5 && Math.abs(yDiff) < 5) {
                         // collision
+                        let moreMassive;
+                        let lessMassive;
                         if (object.mass <= otherObj.mass) {
-                            object.delete = true;
-                            needToDelete = true;
-
-                            const massRatio = object.mass / otherObj.mass;
-                            otherObj.xv += object.xv * massRatio;
-                            otherObj.yv += object.yv * massRatio;
-                            otherObj.mass += object.mass;
+                            lessMassive = object;
+                            moreMassive = otherObj;
                         } else {
-                            otherObj.delete = true;
-                            needToDelete = true;
-
-                            const massRatio = otherObj.mass / object.mass;
-                            object.xv += otherObj.xv * massRatio;
-                            object.yv += otherObj.yv * massRatio;
-                            object.mass += otherObj.mass;
+                            lessMassive = otherObj;
+                            moreMassive = object;
                         }
+                        lessMassive.delete = true;
+                        needToDelete = true;
+
+                        const m1 = moreMassive.mass;
+                        const m2 = lessMassive.mass;
+                        const totalMass = m1 + m2;
+
+                        moreMassive.xv = (m1 * moreMassive.xv + m2 * lessMassive.xv) / totalMass;
+                        moreMassive.yv = (m1 * moreMassive.yv + m2 * lessMassive.yv) / totalMass;
+                        moreMassive.mass += lessMassive.mass;
+
+                        mostMass = Math.max(moreMassive.mass, mostMass);
                     } else {
                         const distSqr = Math.max(xDiff * xDiff + yDiff * yDiff, 1);
                         const g = pub.gravityConst * object.mass * otherObj.mass / distSqr;

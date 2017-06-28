@@ -1,53 +1,238 @@
-// Blue ceil, red wall
+// Blue ceil, red wall =========
 
-loadFromJSON(`[{"className":"createCmd command","val":"15"},{"className":"storeCmd command","val":"15"},{"className":"readCmd command","val":"X"},{"className":"distanceCmd command","val":"Y"},{"className":"jumpCmd jumpLessThan command","id":"jumpCmd0","val":"T","jumpId":"0"},{"className":"readCmd command","val":"B"},{"className":"addCmd command","val":"15"},{"className":"modCmd command","val":"Y"},{"className":"storeCmd command","val":"B"},{"className":"pixelOutCmd command"},{"className":"jumpEnd command","id":"jumpEnd0","jumpId":"0"},{"className":"readCmd command","val":"R"},{"className":"addCmd command","val":"15"},{"className":"modCmd command","val":"X"},{"className":"storeCmd command","val":"R"},{"className":"pixelOutCmd command"}]`)
+def 15
+set 15
+loa x
+dis y
+jlt t #j0
+loa b
+add 15
+mod y
+set b
+out
 
-
-// blue and red strobe with space filler
-
-loadFromJSON(`[{"className":"readCmd command","val":"X"},{"className":"distanceCmd command","val":"Y"},{"className":"jumpCmd jumpLessThan command","id":"jumpCmd0","val":"T","jumpId":"0"},{"className":"readCmd command","val":"B"},{"className":"distanceCmd command","val":"Y"},{"className":"storeCmd command","val":"B"},{"className":"pixelOutCmd command"},{"className":"jumpEnd command","id":"jumpEnd0","jumpId":"0"},{"className":"readCmd command","val":"R"},{"className":"distanceCmd command","val":"X"},{"className":"storeCmd command","val":"R"},{"className":"pixelOutCmd command"}]`)
-
-
-// red chaos vs blue chaos
-
-loadFromJSON(`[{"className":"readCmd command","val":"R"},{"className":"addCmd command","val":"X"},{"className":"divideCmd command","val":"Y"},{"className":"multiplyCmd command","val":"T"},{"className":"storeCmd command","val":"R"},{"className":"readCmd command","val":"B"},{"className":"addCmd command","val":"Y"},{"className":"divideCmd command","val":"X"},{"className":"multiplyCmd command","val":"T"},{"className":"storeCmd command","val":"B"},{"className":"pixelOutCmd command"}]`)
-
-
-// a trip for the ages (rectangle fractions)
-
-loadFromJSON(`[{"className":"createCmd command","val":"255"},{"className":"subtractCmd command","val":"X"},{"className":"addCmd command","val":"R"},{"className":"storeCmd command","val":"R"},{"className":"readCmd command","val":"G"},{"className":"addCmd command","val":"X"},{"className":"storeCmd command","val":"G"},{"className":"readCmd command","val":"B"},{"className":"addCmd command","val":"Y"},{"className":"storeCmd command","val":"B"},{"className":"readCmd command","val":"T"},{"className":"distanceCmd command","val":"X"},{"className":"storeCmd command","val":"X"},{"className":"pixelOutCmd command"}]`)
-
-
-// sandstorm:
-
-loadFromJSON(`[{"className":"readCmd command","val":"G"},{"className":"addCmd command","val":"T"},{"className":"storeCmd command","val":"G"},{"className":"storeCmd command","val":"R"},{"className":"readCmd command","val":"X"},{"className":"subtractCmd command","val":"T"},{"className":"storeCmd command","val":"X"},{"className":"readCmd command","val":"Y"},{"className":"addCmd command","val":"G"},{"className":"storeCmd command","val":"Y"},{"className":"pixelOutCmd command"}]`)
+#j0
+loa r
+add 15
+mod x
+set r
+out
 
 
-// a cave with water randomly painted
+// blue and red strobe with space filler =========
 
-loadFromJSON(`[{"className":"readCmd command","val":"R"},{"className":"modCmd command","val":"X"},{"className":"storeCmd command","val":"G"},{"className":"readCmd command","val":"B"},{"className":"distanceCmd command","val":"T"},{"className":"multiplyCmd command","val":"T"},{"className":"storeCmd command","val":"X"},{"className":"readCmd command","val":"Y"},{"className":"distanceCmd command","val":"T"},{"className":"storeCmd command","val":"B"},{"className":"modCmd command","val":"Y"},{"className":"storeCmd command","val":"R"},{"className":"pixelOutCmd command"}]`)
+loa x
+dis y
+jlt t #j0
+loa b
+dis y
+set b
+out
 
-
-// field of triangles and modulus
-
-loadFromJSON(`[{"className":"readCmd command","val":"X"},{"className":"addCmd command","val":"R"},{"className":"modCmd command","val":"Y"},{"className":"storeCmd command","val":"R"},{"className":"createCmd command","val":"255"},{"className":"subtractCmd command","val":"X"},{"className":"addCmd command","val":"B"},{"className":"modCmd command","val":"Y"},{"className":"storeCmd command","val":"B"},{"className":"createCmd command","val":"255"},{"className":"subtractCmd command","val":"Y"},{"className":"storeCmd command","val":"Y"},{"className":"pixelOutCmd command"}]`)
-
-
-// modulus mirror
-
-loadFromJSON(`[{"className":"createCmd command","val":"255"},{"className":"subtractCmd command","val":"Y"},{"className":"storeCmd command","val":"15"},{"className":"readCmd command","val":"X"},{"className":"addCmd command","val":"R"},{"className":"modCmd command","val":"Y"},{"className":"storeCmd command","val":"R"},{"className":"createCmd command","val":"255"},{"className":"subtractCmd command","val":"X"},{"className":"addCmd command","val":"B"},{"className":"modCmd command","val":"15"},{"className":"storeCmd command","val":"B"},{"className":"pixelOutCmd command"}]`)
-
-
-// open mod door
-
-loadFromJSON(`[{"className":"readCmd command","val":"X"},{"className":"distanceCmd command","val":"Y"},{"className":"subtractCmd command","val":"T"},{"className":"modCmd command","val":"X"},{"className":"multiplyCmd command","val":"Y"},{"className":"storeCmd command","val":"R"},{"className":"pixelOutCmd command"}]`)
+#j0
+loa r
+dis x
+set r
+out
 
 
-// salt and pepper plus a "warp"
+// red chaos vs blue chaos =========
 
-loadFromJSON(`[{"className":"storeCmd command","val":"15"},{"className":"distanceCmd command","val":"X"},{"className":"storeCmd command","val":"B"},{"className":"createCmd command","val":"3"},{"className":"addCmd command","val":"15"},{"className":"modCmd command","val":"R"},{"className":"addCmd command","val":"T"},{"className":"storeCmd command","val":"R"},{"className":"pixelOutCmd command"}]`)
+loa r
+add x
+div y
+mul t
+set r
+loa b
+add y
+div x
+mul t
+set b
+out
 
 
-// falling green buildings
+// a trip for the ages (rectangle fractions) =======
 
-loadFromJSON(`[{"className":"addCmd command","val":"T"},{"className":"addCmd command","val":"X"},{"className":"storeCmd command","val":"G"},{"className":"distanceCmd command","val":"Y"},{"className":"storeCmd command","val":"B"},{"className":"pixelOutCmd command"}]`)
+def 255
+sub x
+add r
+set r
+loa g
+add x
+set g
+loa b
+add y
+set b
+loa t
+dis x
+set x
+out
+
+// sandstorm ============
+
+loa g
+add t
+set g
+set r
+loa x
+sub t
+set x
+loa y
+add g
+set y
+out
+
+
+// a cave with water randomly painted ===========
+
+loa r
+mod x
+set g
+loa b
+dis t
+mul t
+set x
+loa y
+dis t
+set b
+mod y
+set r
+out
+
+
+// field of triangles and modulus ==========
+
+loa x
+add r
+mod y
+set r
+def 255
+sub x
+add b
+mod y
+set b
+def 255
+sub y
+set y
+out
+
+
+// modulus mirror =============
+
+def 255
+sub y
+set 15
+loa x
+add r
+mod y
+set r
+def 255
+sub x
+add b
+mod 15
+set b
+out
+
+
+// open mod door ===========
+
+loa x
+dis y
+sub t
+mod x
+mul y
+set r
+out
+
+
+// salt and pepper plus a "warp" ======
+
+set 15
+dis x
+set b
+def 3
+add 15
+mod r
+add t
+set r
+out
+
+
+// falling green buildings ===========
+
+add t
+add x
+set g
+dis y
+set b
+out
+
+
+// blury triangles ===============
+
+sub t
+mod y
+dis x
+set b
+add y
+dis x
+set g
+loa b
+out
+
+
+// collatz conjec ============
+
+def 0
+set 11 //counter is 11
+loa x
+add t
+set 10 //currentNum is 10
+
+#loop
+mod %2
+jeq %1 #odd
+
+#even
+loa 10
+div %2
+set 10
+jlt %2 #draw
+jmp #add1
+
+#odd
+loa 10
+mul %3
+add %1
+set 10
+
+#add1
+loa 11
+add %1
+set 11
+loa 10
+jmp #loop
+
+#draw
+loa y
+div %3
+jlt 11 #draw2
+def 0
+set r
+out
+
+#draw2
+def 255
+set r
+out
+
+
+// WTF?!?!?
+add t
+add x
+dis y
+add t
+set g
+dis y
+set b
+out

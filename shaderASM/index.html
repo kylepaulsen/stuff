@@ -48,6 +48,7 @@ input {
         <b>div</b> &lt;memory location> <i>Divide the value at the memory location to the register.</i><br>
         <b>dis</b> &lt;memory location> <i>Find the distance (absolute value of sub) of the value at the memory location and the register and store it in the register.</i><br>
         <b>mod</b> &lt;memory location> <i>Find the remainder of the register divided by the value at the memory location and store it in the register.</i><br>
+        <b>rnd</b> <i>Make random number between 0 and 255 and store it in the register.</i><br>
         <b>out</b> <i>Send the pixel to the canvas.</i><br><br>
         You can use %&lt;integer> to represent a constant memory value. Example: This represents 13: %13<br>
         The first 7 memory locations are: the register (0), red (r) (1), green (g) (2), blue (b) (3), x (x) (4), y (y) (5), time (t) (6)<br>
@@ -103,6 +104,7 @@ You can save the image below if you save a gif.<br>
     const DIV_INS = 10;
     const DIST_INS = 11;
     const MOD_INS = 12;
+    const RND_INS = 13;
 
     asmTextarea.value = '// Falling green buildings\n\nadd t\nadd x\nset g\ndis y\nset b\nout';
 
@@ -173,6 +175,9 @@ You can save the image below if you save a gif.<br>
             },
             mod: function(loc) {
                 return [MOD_INS, parseValue(loc)];
+            },
+            rnd: function() {
+                return [RND_INS];
             }
         };
 
@@ -361,6 +366,8 @@ You can save the image below if you save a gif.<br>
                     case MOD_INS:
                         mem[0] = mem[0] % mem[nextInst[1]];
                         break;
+                    case RND_INS:
+                        mem[0] = Math.floor(Math.random() * 256);
                 }
                 if (instructionsSinceLastPixelOut > MAX_ALLOWED_INST) {
                     err = 'Might be in infinite loop! Emergency break!';

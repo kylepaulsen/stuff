@@ -1,0 +1,144 @@
+<html>
+<head>
+<title>Pixel Vision</title>
+<link rel="stylesheet" href="style.css">
+</head>
+<body>
+
+<div id="left">
+    <div id="tv">
+        <canvas id="canvas"></canvas>
+        <img src="tv.svg">
+    </div>
+</div>
+<div id="right">
+    <div id="remote">
+        <div id="remoteScale">
+            <div id="memory">
+                <div id="memRow1">
+                    <div id="mem0" class='memory'><span class='memLabel'>0</span><div class='memVal'>0</div></div>
+                    <div id="mem1" class='memory'><span class='memLabel'>R</span><div class='memVal'>0</div></div>
+                    <div id="mem2" class='memory'><span class='memLabel'>G</span><div class='memVal'>0</div></div>
+                    <div id="mem3" class='memory'><span class='memLabel'>B</span><div class='memVal'>0</div></div>
+                    <div id="mem4" class='memory'><span class='memLabel'>X</span><div class='memVal'>0</div></div>
+                    <div id="mem5" class='memory'><span class='memLabel'>Y</span><div class='memVal'>0</div></div>
+                    <div id="mem6" class='memory'><span class='memLabel'>T</span><div class='memVal'>0</div></div>
+                    <div id="mem7" class='memory'><span class='memLabel'>7</span><div class='memVal'>0</div></div>
+                </div>
+                <div id="memRow2">
+                    <div id="mem8" class='memory'><span class='memLabel'>8</span><div class='memVal'>0</div></div>
+                    <div id="mem9" class='memory'><span class='memLabel'>9</span><div class='memVal'>0</div></div>
+                    <div id="mem10" class='memory'><span class='memLabel'>10</span><div class='memVal'>0</div></div>
+                    <div id="mem11" class='memory'><span class='memLabel'>11</span><div class='memVal'>0</div></div>
+                    <div id="mem12" class='memory'><span class='memLabel'>12</span><div class='memVal'>0</div></div>
+                    <div id="mem13" class='memory'><span class='memLabel'>13</span><div class='memVal'>0</div></div>
+                    <div id="mem14" class='memory'><span class='memLabel'>14</span><div class='memVal'>0</div></div>
+                    <div id="mem15" class='memory'><span class='memLabel'>15</span><div class='memVal'>0</div></div>
+                </div>
+            </div>
+
+            <div id="editor">
+                <div id="commands">
+                    <div id="fakeCommands" class="commandList">
+                        <div class="readCmd command"><span>Read</span></div>
+                        <div class="storeCmd command"><span>Store</span></div>
+                        <div class="createCmd command"><span>Create</span></div>
+                        <div class="addCmd command"><span>Add</span></div>
+                        <div class="subtractCmd command"><span>Subtract</span></div>
+                        <div class="multiplyCmd command"><span>Multiply</span></div>
+                        <div class="divideCmd command"><span>Divide</span></div>
+                        <div class="distanceCmd command"><span>Distance</span></div>
+                        <div class="modCmd command"><span>Remainder</span></div>
+                        <div class="jumpCmd command"><span>Jump</span></div>
+                        <div class="jumpCmd jumpEqual command"><span>Jump<div class='commandDesc'>if equal</div></span></div>
+                        <div class="jumpCmd jumpLessThan command"><span>Jump<div class='commandDesc'>if less<br>than</div></span></div>
+                        <div class="pixelOutCmd command"><span>Send Pixel</span></div>
+                    </div>
+                </div>
+                <div id="programArea">
+                    <div id="program" class="commandList"></div>
+                    <svg id="jumpSvg" width="100%" height="100%">
+                        <defs>
+                            <marker id="jumpArrow" markerWidth="3" markerHeight="3" refX="0" refY="1.5" orient="auto" markerUnits="strokeWidth">
+                                <path d="M0 0 L0 3 L2 1.5 Z" stroke-width="0" class="jumpArrow" />
+                            </marker>
+                        </defs>
+                    </svg>
+                </div>
+            </div>
+
+            <div id="controlButtons">
+                <div id="prevBtn" class="controlBtn">
+                    <div class="bar"></div>
+                    <div class="triangle"></div>
+                </div>
+
+                <div id="playBtn" class="controlBtn">
+                    <div class="triangle"></div>
+                </div>
+
+                <div id="stopBtn" class="controlBtn">
+                    <div class="square"></div>
+                </div>
+
+                <div id="nextBtn" class="controlBtn">
+                    <div class="triangle"></div>
+                    <div class="bar"></div>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<div id="modalOverlay"></div>
+<div id="createValueModal">
+    <div id="modalTitle">Create a value</div>
+    <div id="modalContent">
+        <table>
+            <tr class="arrows">
+                <td><div id='hunUp' class='arrowBtn'><div class="upArrow"></div></div></td>
+                <td><div id='tenUp' class='arrowBtn'><div class="upArrow"></div></div></td>
+                <td><div id='oneUp' class='arrowBtn'><div class="upArrow"></div></div></td>
+            </tr>
+            <tr>
+                <td><div id="numHundreds" class='createNum'>0</div></td>
+                <td><div id="numTens" class='createNum'>0</div></td>
+                <td><div id="numOnes" class='createNum'>0</div></td>
+            </tr>
+            <tr class="arrows">
+                <td><div id='hunDown' class='arrowBtn'><div class="downArrow"></div></div></td>
+                <td><div id='tenDown' class='arrowBtn'><div class="downArrow"></div></div></td>
+                <td><div id='oneDown' class='arrowBtn'><div class="downArrow"></div></div></td>
+            </tr>
+        </table>
+    </div>
+    <div id="modalBottom">
+        <div id="createBtn">Create</div>
+    </div>
+</div>
+
+<script src="vendor/Sortable.min.js"></script>
+<script src="vendor/gif.js"></script>
+
+<script src="src/memoryUtils.js"></script>
+
+<script src="src/storeInst.js"></script>
+<script src="src/readInst.js"></script>
+<script src="src/createInst.js"></script>
+<script src="src/addInst.js"></script>
+<script src="src/subtractInst.js"></script>
+<script src="src/multiplyInst.js"></script>
+<script src="src/divideInst.js"></script>
+<script src="src/distanceInst.js"></script>
+<script src="src/modInst.js"></script>
+<script src="src/jumpInst.js"></script>
+<script src="src/jumpEqualInst.js"></script>
+<script src="src/jumpLessThanInst.js"></script>
+<script src="src/pixelOutInst.js"></script>
+
+<script src="src/pixelVisionCPU.js"></script>
+
+<script src="src/app.js"></script>
+
+</body>
+</html>

@@ -1,144 +1,528 @@
 <html>
 <head>
 <title>Pixel Vision</title>
-<link rel="stylesheet" href="style.css">
+<style>
+body {
+    font-family: monospace;
+}
+textarea {
+    width: 150px;
+    height: 400px;
+    border: 1px solid #000;
+}
+td {
+    vertical-align: top;
+}
+table {
+    margin: 20px 0;
+}
+canvas {
+    image-rendering: pixelated;
+}
+input {
+    width: 50px;
+}
+</style>
 </head>
 <body>
 
-<div id="left">
-    <div id="tv">
-        <canvas id="canvas"></canvas>
-        <img src="tv.svg">
-    </div>
-</div>
-<div id="right">
-    <div id="remote">
-        <div id="remoteScale">
-            <div id="memory">
-                <div id="memRow1">
-                    <div id="mem0" class='memory'><span class='memLabel'>0</span><div class='memVal'>0</div></div>
-                    <div id="mem1" class='memory'><span class='memLabel'>R</span><div class='memVal'>0</div></div>
-                    <div id="mem2" class='memory'><span class='memLabel'>G</span><div class='memVal'>0</div></div>
-                    <div id="mem3" class='memory'><span class='memLabel'>B</span><div class='memVal'>0</div></div>
-                    <div id="mem4" class='memory'><span class='memLabel'>X</span><div class='memVal'>0</div></div>
-                    <div id="mem5" class='memory'><span class='memLabel'>Y</span><div class='memVal'>0</div></div>
-                    <div id="mem6" class='memory'><span class='memLabel'>T</span><div class='memVal'>0</div></div>
-                    <div id="mem7" class='memory'><span class='memLabel'>7</span><div class='memVal'>0</div></div>
-                </div>
-                <div id="memRow2">
-                    <div id="mem8" class='memory'><span class='memLabel'>8</span><div class='memVal'>0</div></div>
-                    <div id="mem9" class='memory'><span class='memLabel'>9</span><div class='memVal'>0</div></div>
-                    <div id="mem10" class='memory'><span class='memLabel'>10</span><div class='memVal'>0</div></div>
-                    <div id="mem11" class='memory'><span class='memLabel'>11</span><div class='memVal'>0</div></div>
-                    <div id="mem12" class='memory'><span class='memLabel'>12</span><div class='memVal'>0</div></div>
-                    <div id="mem13" class='memory'><span class='memLabel'>13</span><div class='memVal'>0</div></div>
-                    <div id="mem14" class='memory'><span class='memLabel'>14</span><div class='memVal'>0</div></div>
-                    <div id="mem15" class='memory'><span class='memLabel'>15</span><div class='memVal'>0</div></div>
-                </div>
-            </div>
+<canvas id="canvas"></canvas>
+<div style="display: inline-block">
+    <img id="firstFrameImg" src="" width="256" height="256" style="display: none;"><br>
+    <button id="loadImageBtn">Use Image For First Frame</button> <button id="clearImageBtn">Clear Image</button>
+    <input type="file" id="loadFileInput" style="display: none;">
+</div><br>
+<table>
+    <tr><td>
+        <textarea id="asmTextarea"></textarea>
+    </td><td>
+        <b>def</b> &lt;number> <i>Create a number and store it in the register.</i><br>
+        <b>loa</b> &lt;memory location> <i>Load a memory location into the register.</i><br>
+        <b>set</b> &lt;memory location> <i>Set a memory location to the value of the register.</i><br>
+        <b>jmp</b> &lt;#label> <i>Jump to the label.</i><br>
+        <b>jeq</b> &lt;memory location> &lt;#label> <i>If the register matches the value at this memory location, jump to the label.</i><br>
+        <b>jlt</b> &lt;memory location> &lt;#label> <i>If the register is less than the value at this memory location, jump to the label.</i><br>
+        <b>add</b> &lt;memory location> <i>Add the value at the memory location to the register.</i><br>
+        <b>sub</b> &lt;memory location> <i>Subtract the value at the memory location to the register.</i><br>
+        <b>mul</b> &lt;memory location> <i>Multiply the value at the memory location to the register.</i><br>
+        <b>div</b> &lt;memory location> <i>Divide the value at the memory location to the register.</i><br>
+        <b>dis</b> &lt;memory location> <i>Find the distance (absolute value of sub) of the value at the memory location and the register and store it in the register.</i><br>
+        <b>mod</b> &lt;memory location> <i>Find the remainder of the register divided by the value at the memory location and store it in the register.</i><br>
+        <b>out</b> <i>Send the pixel to the canvas.</i><br><br>
+        You can use %&lt;integer> to represent a constant memory value. Example: This represents 13: %13<br>
+        The first 7 memory locations are: the register (0), red (r) (1), green (g) (2), blue (b) (3), x (x) (4), y (y) (5), time (t) (6)<br>
+        Memory locations 7-15 are free. Double slashes (//) represent a comment till the next end line.<br>
+        Press F5 as a shortcut to compile and run.
+    </td></tr>
+</table>
+<button id="runBtn">Run</button><br><br><br>
+Num Frames: <input id="numFrames" value="255"><br>
+Frame Delay: <input id="delay" value="0.02"> (in seconds. Try to use at least 0.02)<br>
+Quality: <input id="quality" value="1"> (lower quality is better.)<br>
+<button id="saveGifBtn">Save Gif</button><br>
+You can save the image below if you save a gif.<br>
+<img id="saveGif">
 
-            <div id="editor">
-                <div id="commands">
-                    <div id="fakeCommands" class="commandList">
-                        <div class="readCmd command"><span>Read</span></div>
-                        <div class="storeCmd command"><span>Store</span></div>
-                        <div class="createCmd command"><span>Create</span></div>
-                        <div class="addCmd command"><span>Add</span></div>
-                        <div class="subtractCmd command"><span>Subtract</span></div>
-                        <div class="multiplyCmd command"><span>Multiply</span></div>
-                        <div class="divideCmd command"><span>Divide</span></div>
-                        <div class="distanceCmd command"><span>Distance</span></div>
-                        <div class="modCmd command"><span>Remainder</span></div>
-                        <div class="jumpCmd command"><span>Jump</span></div>
-                        <div class="jumpCmd jumpEqual command"><span>Jump<div class='commandDesc'>if equal</div></span></div>
-                        <div class="jumpCmd jumpLessThan command"><span>Jump<div class='commandDesc'>if less<br>than</div></span></div>
-                        <div class="pixelOutCmd command"><span>Send Pixel</span></div>
-                    </div>
-                </div>
-                <div id="programArea">
-                    <div id="program" class="commandList"></div>
-                    <svg id="jumpSvg" width="100%" height="100%">
-                        <defs>
-                            <marker id="jumpArrow" markerWidth="3" markerHeight="3" refX="0" refY="1.5" orient="auto" markerUnits="strokeWidth">
-                                <path d="M0 0 L0 3 L2 1.5 Z" stroke-width="0" class="jumpArrow" />
-                            </marker>
-                        </defs>
-                    </svg>
-                </div>
-            </div>
-
-            <div id="controlButtons">
-                <div id="prevBtn" class="controlBtn">
-                    <div class="bar"></div>
-                    <div class="triangle"></div>
-                </div>
-
-                <div id="playBtn" class="controlBtn">
-                    <div class="triangle"></div>
-                </div>
-
-                <div id="stopBtn" class="controlBtn">
-                    <div class="square"></div>
-                </div>
-
-                <div id="nextBtn" class="controlBtn">
-                    <div class="triangle"></div>
-                    <div class="bar"></div>
-                </div>
-            </div>
-        </div>
-    </div>
-</div>
-
-<div id="modalOverlay"></div>
-<div id="createValueModal">
-    <div id="modalTitle">Create a value</div>
-    <div id="modalContent">
-        <table>
-            <tr class="arrows">
-                <td><div id='hunUp' class='arrowBtn'><div class="upArrow"></div></div></td>
-                <td><div id='tenUp' class='arrowBtn'><div class="upArrow"></div></div></td>
-                <td><div id='oneUp' class='arrowBtn'><div class="upArrow"></div></div></td>
-            </tr>
-            <tr>
-                <td><div id="numHundreds" class='createNum'>0</div></td>
-                <td><div id="numTens" class='createNum'>0</div></td>
-                <td><div id="numOnes" class='createNum'>0</div></td>
-            </tr>
-            <tr class="arrows">
-                <td><div id='hunDown' class='arrowBtn'><div class="downArrow"></div></div></td>
-                <td><div id='tenDown' class='arrowBtn'><div class="downArrow"></div></div></td>
-                <td><div id='oneDown' class='arrowBtn'><div class="downArrow"></div></div></td>
-            </tr>
-        </table>
-    </div>
-    <div id="modalBottom">
-        <div id="createBtn">Create</div>
-    </div>
-</div>
-
-<script src="vendor/Sortable.min.js"></script>
 <script src="vendor/gif.js"></script>
 
-<script src="src/memoryUtils.js"></script>
+<script>
+    const ui = {};
+    const allIds = document.querySelectorAll('[id]');
+    for (let x = 0; x < allIds.length; x++) {
+        ui[allIds[x].id] = allIds[x];
+    }
+    const canvas = ui.canvas;
+    const asmTextarea = ui.asmTextarea;
+    const runBtn = ui.runBtn;
+    let loadFirstFrameImage = false;
+    let initWidth = 256;
+    let initHeight = 256;
+    let width = initWidth;
+    let height = initHeight;
+    let imgDataObj;
+    let imgData;
+    let imgDataSize;
+    let frame;
+    let requestedFrame;
 
-<script src="src/storeInst.js"></script>
-<script src="src/readInst.js"></script>
-<script src="src/createInst.js"></script>
-<script src="src/addInst.js"></script>
-<script src="src/subtractInst.js"></script>
-<script src="src/multiplyInst.js"></script>
-<script src="src/divideInst.js"></script>
-<script src="src/distanceInst.js"></script>
-<script src="src/modInst.js"></script>
-<script src="src/jumpInst.js"></script>
-<script src="src/jumpEqualInst.js"></script>
-<script src="src/jumpLessThanInst.js"></script>
-<script src="src/pixelOutInst.js"></script>
+    canvas.width = initWidth;
+    canvas.height = initHeight;
+    const ctx = canvas.getContext('2d');
+    ctx.fillRect(0, 0, width, height);
 
-<script src="src/pixelVisionCPU.js"></script>
+    const CREATE_INS = 0;
+    const READ_INS = 1;
+    const STORE_INS = 2;
+    const OUT_INS = 3;
+    const JUMP_INS = 4;
+    const JUMPEQ_INS = 5;
+    const JUMPLT_INS = 6;
+    const ADD_INS = 7;
+    const SUB_INS = 8;
+    const MULT_INS = 9;
+    const DIV_INS = 10;
+    const DIST_INS = 11;
+    const MOD_INS = 12;
 
-<script src="src/app.js"></script>
+    asmTextarea.value = '// Falling green buildings\n\nadd t\nadd x\nset g\ndis y\nset b\nout';
+
+    const compile = function() {
+        const constsLoc = {};
+        const constsVal = [];
+
+        const parseIntWithCheck = function(val, min, max) {
+            const ans = parseInt(val);
+            if (isNaN(ans) || ans < val || ans > max) {
+                const err = val + ' is not a valid value.';
+                alert(err);
+                throw new Error(err);
+            }
+            return ans;
+        }
+
+        const parseValue = function(val) {
+            let ans;
+            if (val[0] === '%') {
+                if (constsLoc[val] === undefined) {
+                    constsLoc[val] = constsVal.length + cpuData.maxMem;
+                    constsVal.push(parseIntWithCheck(val.substring(1), 0, 255));
+                }
+                ans = constsLoc[val];
+            } else {
+                ans = parseIntWithCheck(val, 0, cpuData.maxMem - 1);
+            }
+            return ans;
+        };
+
+        const compileInsts = {
+            def: function(val) {
+                return [CREATE_INS, parseIntWithCheck(val, 0, 255)];
+            },
+            loa: function(loc) {
+                return [READ_INS, parseIntWithCheck(loc, 0, cpuData.maxMem - 1)];
+            },
+            set: function(loc) {
+                return [STORE_INS, parseIntWithCheck(loc, 0, cpuData.maxMem - 1)];
+            },
+            out: function() {
+                return [OUT_INS];
+            },
+            jmp: function(label) {
+                return [JUMP_INS, label];
+            },
+            jeq: function(loc, label) {
+                return [JUMPEQ_INS, parseValue(loc), label];
+            },
+            jlt: function(loc, label) {
+                return [JUMPLT_INS, parseValue(loc), label];
+            },
+            add: function(loc) {
+                return [ADD_INS, parseValue(loc)];
+            },
+            sub: function(loc) {
+                return [SUB_INS, parseValue(loc)];
+            },
+            mul: function(loc) {
+                return [MULT_INS, parseValue(loc)];
+            },
+            div: function(loc) {
+                return [DIV_INS, parseValue(loc)];
+            },
+            dis: function(loc) {
+                return [DIST_INS, parseValue(loc)];
+            },
+            mod: function(loc) {
+                return [MOD_INS, parseValue(loc)];
+            }
+        };
+
+        const varsToLoc = function(str) {
+            if (!str) {
+                return;
+            }
+            if (str[0] === '#') {
+                return str;
+            }
+            str = str.replace('r', '1');
+            str = str.replace('g', '2');
+            str = str.replace('b', '3');
+            str = str.replace('x', '4');
+            str = str.replace('y', '5');
+            str = str.replace('t', '6');
+            return str;
+        };
+
+        let insts = [];
+        let asm = asmTextarea.value.toLowerCase().replace(/\/\/[^\n]*/g, '');
+        while (asm.indexOf('  ') > -1) {
+            asm = asm.replace(/  /g, ' ');
+        }
+        let nextLabel;
+        const lines = asm.split('\n');
+        lines.forEach(function(line) {
+            line = line.trim();
+            const lineParts = line.split(' ');
+            const inst = lineParts[0];
+            const instFunc = compileInsts[inst];
+            if (instFunc) {
+                const instData = {inst: instFunc(varsToLoc(lineParts[1]), lineParts[2])};
+                if (nextLabel) {
+                    instData.label = nextLabel;
+                    nextLabel = undefined;
+                }
+                insts.push(instData);
+            } else if (inst[0] === '#' && inst.length > 1) {
+                nextLabel = inst;
+            }
+        });
+        const label2line = {};
+        insts.forEach(function(instObj, idx) {
+            if (instObj.label) {
+                label2line[instObj.label] = idx;
+            }
+        });
+        insts = insts.map(function(instObj) {
+            const inst = instObj.inst;
+            if (inst[0] === JUMP_INS) {
+                const line = label2line[inst[1]];
+                if (line === undefined) {
+                    const err = 'Err: No such label: ' + inst[1];
+                    alert(err);
+                    throw new Error(err);
+                }
+                inst[1] = line;
+            } else if (inst[0] === JUMPEQ_INS || inst[0] === JUMPLT_INS) {
+                const line = label2line[inst[2]];
+                if (line === undefined) {
+                    const err = 'Err: No such label: ' + inst[2];
+                    alert(err);
+                    throw new Error(err);
+                }
+                inst[2] = line;
+            }
+            return inst;
+        });
+        cpuData.instructions = insts;
+        cpuData.mem = new Uint8Array(cpuData.maxMem + constsVal.length);
+        let x = cpuData.maxMem;
+        let t = 0;
+        while (x < cpuData.mem.length) {
+            cpuData.mem[x] = constsVal[t];
+            x++;
+            t++;
+        }
+    };
+
+    const compileAndRun = function() {
+        if (loadFirstFrameImage) {
+            paintImage();
+        }
+        reset();
+        compile();
+        run();
+    };
+
+    const paintImage = function() {
+        ctx.drawImage(ui.firstFrameImg, 0, 0, 256, 256);
+    };
+
+    const reset = function() {
+        stop();
+        if (!loadFirstFrameImage) {
+            width = canvas.width;
+            height = canvas.height;
+            ctx.fillRect(0, 0, width, height);
+        }
+        imgDataObj = ctx.getImageData(0, 0, width, height);
+        imgData = imgDataObj.data;
+        imgDataSize = imgData.length;
+        frame = 0;
+    };
+
+    const MAXMEM = 16;
+    const MAX_ALLOWED_INST = 999;
+    const cpuData = {
+        maxMem: MAXMEM,
+        instructions: [],
+        consts: [],
+        mem: new Uint8Array(MAXMEM),
+        instructionPointer: 0
+    };
+
+    const stop = function() {
+        if (requestedFrame) {
+            cancelAnimationFrame(requestedFrame);
+            requestedFrame = undefined;
+        }
+    };
+
+    const run = function() {
+        //console.time('render time');
+        // using var to help V8 not bail out!
+        var heightM1 = height - 1
+        var x = 0;
+        var y = heightM1;
+        var idx = 0;
+        var err;
+
+        while (idx < imgDataSize) {
+            var mem = cpuData.mem;
+            cpuData.instructionPointer = 0;
+
+            // feed in initial data.
+            mem[1] = imgData[idx];
+            mem[2] = imgData[idx + 1];
+            mem[3] = imgData[idx + 2];
+            mem[4] = x;
+            mem[5] = y;
+            mem[6] = frame;
+
+            var instructionsSinceLastPixelOut = 0;
+            var nextInst = cpuData.instructions[cpuData.instructionPointer++];
+            while (nextInst && nextInst[0] !== OUT_INS) {
+                switch (nextInst[0]) {
+                    case CREATE_INS:
+                        mem[0] = nextInst[1];
+                        break;
+                    case READ_INS:
+                        mem[0] = mem[nextInst[1]];
+                        break;
+                    case STORE_INS:
+                        mem[nextInst[1]] = mem[0];
+                        break;
+                    case JUMP_INS:
+                        cpuData.instructionPointer = nextInst[1];
+                        break;
+                    case JUMPEQ_INS:
+                        if (mem[0] === mem[nextInst[1]]) {
+                            cpuData.instructionPointer = nextInst[2];
+                        }
+                        break;
+                    case JUMPLT_INS:
+                        if (mem[0] < mem[nextInst[1]]) {
+                            cpuData.instructionPointer = nextInst[2];
+                        }
+                        break;
+                    case ADD_INS:
+                        mem[0] = mem[0] + mem[nextInst[1]];
+                        break;
+                    case SUB_INS:
+                        mem[0] = mem[0] - mem[nextInst[1]];
+                        break;
+                    case MULT_INS:
+                        mem[0] = mem[0] * mem[nextInst[1]];
+                        break;
+                    case DIV_INS:
+                        mem[0] = mem[0] / mem[nextInst[1]];
+                        break;
+                    case DIST_INS:
+                        mem[0] = Math.abs(mem[0] - mem[nextInst[1]]);
+                        break;
+                    case MOD_INS:
+                        mem[0] = mem[0] % mem[nextInst[1]];
+                        break;
+                }
+                if (instructionsSinceLastPixelOut > MAX_ALLOWED_INST) {
+                    err = 'Might be in infinite loop! Emergency break!';
+                    break;
+                }
+                nextInst = cpuData.instructions[cpuData.instructionPointer++];
+                instructionsSinceLastPixelOut++;
+            }
+            if (!nextInst) {
+                err = 'Didn\'t get a pixel out!';
+            }
+            if (err) {
+                break;
+            }
+            instructionsSinceLastPixelOut = 0;
+
+            var newIdx = 4 * ((heightM1 - mem[5]) * width + mem[4]);
+            imgData[newIdx] = mem[1];
+            imgData[newIdx + 1] = mem[2];
+            imgData[newIdx + 2] = mem[3];
+            imgData[newIdx + 3] = 255;
+            frame = mem[6];
+
+            x++;
+            if (x >= width) {
+                x = 0;
+                y--;
+            }
+            idx = idx + 4;
+        }
+
+        if (err) {
+            alert(err);
+            throw new Error(err);
+        }
+
+        ctx.putImageData(imgDataObj, 0, 0);
+        //console.timeEnd('render time');
+        frame++;
+
+        requestedFrame = requestAnimationFrame(run);
+    };
+
+    const nextFrame = function() {
+        if (!imgDataObj) {
+            reset();
+        }
+        if (!requestedFrame) {
+            run();
+            stop();
+        }
+    };
+
+    function saveGif(numFrames, delay, quality) {
+        console.log('saveGif(numFrames, delay_in_ms, quality) // lower quality is better.');
+        numFrames = numFrames === undefined ? 30 : numFrames;
+        delay = delay === undefined ? 30 : delay;
+        quality = quality === undefined ? 1 : quality;
+        const cores = navigator.hardwareConcurrency || 1;
+
+        const gif = new GIF({
+            workers: Math.min(cores, 16),
+            quality: 1,
+            width: 256,
+            height: 256,
+            workerScript: 'vendor/gif.worker.js'
+        });
+
+        compile();
+        stop();
+        reset();
+        while (numFrames-- > 0) {
+            nextFrame();
+            gif.addFrame(ctx, {copy: true, delay: delay});
+        }
+
+        gif.on('finished', function(blob) {
+            const url = URL.createObjectURL(blob);
+            ui.saveGif.src = url;
+            ui.saveGifBtn.disabled = false;
+            window.open(url);
+        });
+
+        gif.render();
+    }
+
+    function getFullscreenEl() {
+        return document.fullscreenElement || document.webkitFullscreenElement ||
+            document.mozFullscreenElement || document.msFullscreenElement;
+    }
+
+    function onFullscreenChange(func) {
+        const events = ['fullscreenchange', 'webkitfullscreenchange', 'mozfullscreenchange', 'MSFullscreenChange'];
+        events.forEach(function(ev) {
+            document.addEventListener(ev, func);
+        });
+    }
+
+    function toggleFullscreen(el) {
+        const fullscreenFunc = el.requestFullscreen || el.webkitRequestFullscreen ||
+            el.mozRequestFullscreen || el.msRequestFullscreen;
+        const exitFullscreenFunc = document.exitFullscreen || document.webkitExitFullscreen ||
+            document.mozExitFullscreen || document.msExitFullscreen;
+        const fullScreenEl = getFullscreenEl();
+        if (fullScreenEl) {
+            exitFullscreenFunc.call(document);
+            return false;
+        } else {
+            fullscreenFunc.call(el);
+            return true;
+        }
+    }
+
+    runBtn.addEventListener('click', compileAndRun);
+    canvas.addEventListener('click', function() {
+        canvas.style.height = '100%';
+        toggleFullscreen(canvas);
+    });
+    window.addEventListener('keydown', function(e) {
+        if (e.keyCode === 116) {
+            e.preventDefault();
+            compileAndRun();
+        }
+    });
+    onFullscreenChange(function() {
+        if (!getFullscreenEl()) {
+            canvas.style.height = 'auto';
+        }
+    });
+    ui.saveGifBtn.addEventListener('click', function() {
+        ui.saveGifBtn.disabled = true;
+        ui.saveGif.src = '';
+        const numFrames = parseInt(ui.numFrames.value);
+        const frameDelay = Math.floor(parseFloat(ui.delay.value) * 1000);
+        const quality = parseInt(ui.quality.value);
+        saveGif(numFrames, frameDelay, quality);
+    });
+    ui.loadImageBtn.addEventListener('click', function() {
+        ui.loadFileInput.value = '';
+        ui.loadFileInput.click();
+    });
+    ui.loadFileInput.addEventListener('change', function(e) {
+        const files = e.target.files;
+
+        // FileReader support
+        if (FileReader && files && files.length) {
+            const fr = new FileReader();
+            fr.onload = function () {
+                ui.firstFrameImg.src = fr.result;
+                ui.firstFrameImg.style.display = 'inline';
+                loadFirstFrameImage = true;
+            }
+            fr.readAsDataURL(files[0]);
+        }
+    });
+    ui.clearImageBtn.addEventListener('click', function() {
+        loadFirstFrameImage = false;
+        ui.firstFrameImg.src = '';
+        ui.firstFrameImg.style.display = 'none';
+    });
+    compileAndRun();
+</script>
 
 </body>
 </html>

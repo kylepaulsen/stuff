@@ -236,3 +236,40 @@ set g
 dis y
 set b
 out
+
+
+// Wandering Pixels (needs first frame image)
+
+rnd
+
+jlt %10 #x1
+jlt %20 #x2
+jlt %30 #y1
+jlt %40 #y2
+jmp #done
+
+#x1
+loa x
+add %1
+set x
+jmp #done
+
+#x2
+loa x
+sub %1
+set x
+jmp #done
+
+#y1
+loa y
+add %1
+set y
+jmp #done
+
+#y2
+loa y
+sub %1
+set y
+
+#done
+out

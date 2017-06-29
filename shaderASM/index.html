@@ -53,7 +53,7 @@ input {
         You can use %&lt;integer> to represent a constant memory value. Example: This represents 13: %13<br>
         The first 7 memory locations are: the register (0), red (r) (1), green (g) (2), blue (b) (3), x (x) (4), y (y) (5), time (t) (6)<br>
         Memory locations 7-15 are free. Double slashes (//) represent a comment till the next end line.<br>
-        Press F5 as a shortcut to compile and run.
+        Press F6 as a shortcut to compile and run.
     </td></tr>
 </table>
 <button id="runBtn">Run</button><br><br><br>
@@ -436,9 +436,13 @@ You can save the image below if you save a gif.<br>
             workerScript: 'vendor/gif.worker.js'
         });
 
-        compile();
         stop();
+        if (loadFirstFrameImage) {
+            paintImage();
+        }
         reset();
+        compile();
+
         while (numFrames-- > 0) {
             nextFrame();
             gif.addFrame(ctx, {copy: true, delay: delay});
@@ -487,7 +491,7 @@ You can save the image below if you save a gif.<br>
         toggleFullscreen(canvas);
     });
     window.addEventListener('keydown', function(e) {
-        if (e.keyCode === 116) {
+        if (e.keyCode === 117) {
             e.preventDefault();
             compileAndRun();
         }

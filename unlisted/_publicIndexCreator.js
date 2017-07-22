@@ -40,7 +40,6 @@ let indexHTML = `<!DOCTYPE html>
                 <a class="icon" target="_blank" href="http://www.linkedin.com/in/kylepaulsen">&#xe602;<span class="visuallyhidden">LinkedIn</span></a>
                 <a class="icon" target="_blank" href="https://github.com/kylepaulsen">&#xe601;<span class="visuallyhidden">Github</span></a>
             </div>
-            <div class="clearfix"></div>
         </div>
     </div>
     <div id="middle2">

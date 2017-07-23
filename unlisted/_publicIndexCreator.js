@@ -31,7 +31,7 @@ let indexHTML = `<!DOCTYPE html>
     <div id="top">
         <div class="page">
             <div class="logo">
-                <a href="http://www.kylepaulsen.com/">
+                <a href="https://www.kylepaulsen.com/">
                     <img src="../img/KyleLogo.svg" alt="Kyle Paulsen">
                 </a>
             </div>

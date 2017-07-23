@@ -1,6 +1,15 @@
+<!DOCTYPE html>
+<!--
+Hi! Thanks for looking.
+Feel free to visit my github for better code:
+https://github.com/kylepaulsen
+
+This code is under the MIT license:
+http://opensource.org/licenses/MIT
+-->
 <html>
 <head>
-<title>Pixel Vision</title>
+<title>Shader ASM</title>
 <style>
 body {
     font-family: monospace;
@@ -25,13 +34,17 @@ input {
 </style>
 </head>
 <body>
-
-<canvas id="canvas"></canvas>
-<div style="display: inline-block">
-    <img id="firstFrameImg" src="" width="256" height="256" style="display: none;"><br>
+<h1>Shader ASM</h1>
+<p>Have fun making crazy images with a simple assembly-like language.</p>
+<canvas id="canvas" style="float: left"></canvas>
+<div style="float: left">
+    <img id="firstFrameImg" src="" width="256" height="256"><br>
     <button id="loadImageBtn">Use Image For First Frame</button> <button id="clearImageBtn">Clear Image</button>
     <input type="file" id="loadFileInput" style="display: none;">
-</div><br>
+</div>
+<div style="clear: both;"></div>
+<br>
+<select id="loadExample" style="display: none"></select>
 <table>
     <tr><td>
         <textarea id="asmTextarea"></textarea>
@@ -521,7 +534,6 @@ You can save the image below if you save a gif.<br>
             const fr = new FileReader();
             fr.onload = function () {
                 ui.firstFrameImg.src = fr.result;
-                ui.firstFrameImg.style.display = 'inline';
                 loadFirstFrameImage = true;
             }
             fr.readAsDataURL(files[0]);
@@ -530,8 +542,37 @@ You can save the image below if you save a gif.<br>
     ui.clearImageBtn.addEventListener('click', function() {
         loadFirstFrameImage = false;
         ui.firstFrameImg.src = '';
-        ui.firstFrameImg.style.display = 'none';
     });
+
+    let examples;
+    function loadExamples() {
+        examples = [];
+        fetch('cool.xml').then(r => r.text()).then(xml => {
+            const parser = new DOMParser();
+            const dom = parser.parseFromString(xml, 'text/xml');
+            const exampleEls = dom.querySelectorAll('example');
+            let htmlStr = '<option value="-1">Load Example...</option>';
+            for (let x = 0; x < exampleEls.length; x++) {
+                const example = exampleEls[x];
+                const newExample = {
+                    name: example.querySelector('name').textContent,
+                    code: example.querySelector('code').textContent.trim().replace(/\n +/g, '\n')
+                };
+                examples.push(newExample);
+                htmlStr += `<option value=${x}>${newExample.name}</option>`;
+            }
+            ui.loadExample.innerHTML = htmlStr;
+            ui.loadExample.style.display = 'block';
+        });
+    }
+    loadExamples();
+
+    ui.loadExample.addEventListener('change', function() {
+        ui.asmTextarea.value = examples[ui.loadExample.value].code;
+        ui.loadExample.value = '-1';
+        compileAndRun();
+    });
+
     compileAndRun();
 </script>
 

@@ -175,6 +175,7 @@
                 currentColor.r = r;
                 currentColor.g = g;
                 currentColor.b = b;
+                currentColor.transparent = undefined;
             }
         }
     };

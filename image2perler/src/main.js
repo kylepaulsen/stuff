@@ -9,7 +9,7 @@
     const canvas = ui.canvas;
     const ctx = ui.canvas.getContext('2d');
 
-    app.originalWidth = 0;
+    app.originalWidth = canvas.width;
     app.currentZoom = 100;
     app.currentZoomRatio = 1;
     app.pixelRatio = 1;

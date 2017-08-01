@@ -12,7 +12,7 @@
     const zoomRange = ui.zoomRange;
 
     app.setZoom = function(zoomP) {
-        zoomP = Math.floor(zoomP);
+        zoomP = Math.max(Math.floor(zoomP), 1);
         app.currentZoom = zoomP;
         if (parseInt(zoom.value) !== zoomP) {
             zoom.value = zoomP;
@@ -44,7 +44,7 @@
         if (e.shiftKey) {
             e.preventDefault();
             const oldZoom = app.currentZoom;
-            const zoomAmount = Math.floor(oldZoom / 10);
+            const zoomAmount = Math.max(Math.floor(oldZoom / 10), 1);
             if (e.deltaY > 0) {
                 // zoom out.
                 app.setZoom(oldZoom - zoomAmount);

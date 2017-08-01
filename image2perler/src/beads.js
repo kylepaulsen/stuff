@@ -31,7 +31,7 @@
             b: 241
         },
         {
-            name: 'Cream',
+            name: 'Cream (creme)',
             r: 224,
             g: 222,
             b: 169
@@ -71,6 +71,12 @@
             r: 43,
             g: 63,
             b: 135
+        },
+        {
+            name: 'Light Blue',
+            r: 51,
+            g: 112,
+            b: 192
         },
         {
             name: 'Dark Green',
@@ -149,6 +155,12 @@
             r: 129,
             g: 93,
             b: 52
+        },
+        {
+            name: 'Peach',
+            r: 238,
+            g: 186,
+            b: 178
         },
         {
             name: 'Tan',
@@ -241,7 +253,7 @@
             b: 19
         },
         {
-            name: 'Cyan',
+            name: 'Turquoise (Cyan)',
             r: 43,
             g: 137,
             b: 198
@@ -251,12 +263,6 @@
             r: 255,
             g: 130,
             b: 133
-        },
-        {
-            name: 'Light Blue',
-            r: 51,
-            g: 112,
-            b: 192
         },
         {
             name: 'Periwinkle Blue',
@@ -283,10 +289,22 @@
             b: 66
         },
         {
-            name: 'Peach',
-            r: 238,
-            g: 186,
+            name: 'Light Grey',
+            r: 177,
+            g: 181,
             b: 178
+        },
+        {
+            name: 'Evergreen',
+            r: 53,
+            g: 83,
+            b: 67
+        },
+        {
+            name: 'Lavender',
+            r: 173,
+            g: 152,
+            b: 212
         },
         {
             name: 'Pink',
@@ -325,7 +343,7 @@
             b: 86
         },
         {
-            name: 'Blueberry Cream',
+            name: 'Blueberry Cream (creme)',
             r: 130,
             g: 151,
             b: 217

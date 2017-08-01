@@ -1,3 +1,2 @@
-color changing
 better grid (one that doesn't unload)?
 mouse drag to navigate?

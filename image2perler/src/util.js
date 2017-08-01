@@ -18,7 +18,6 @@
 
     const canvasClickHandlers = [];
     const mid = app.ui.mid;
-    const rect = mid.getBoundingClientRect();
 
     app.util = {
         listen: function(node, events, fn) {
@@ -30,8 +29,6 @@
             setTimeout(fn, 0);
         },
         drawRect: function(ctx, x, y, w, h) {
-            w -= 1;
-            h -= 1;
             ctx.fillRect(x, y, w, 1);
             ctx.fillRect(x, y, 1, h);
             ctx.fillRect(x + w, y, 1, h);
@@ -72,6 +69,7 @@
             console.error(e);
         },
         getCanvasPixelFromMouseEvent: function(e) {
+            const rect = mid.getBoundingClientRect();
             return {
                 x: Math.floor((e.pageX + mid.scrollLeft) * app.pixelRatio),
                 y: Math.floor((e.pageY - rect.top + mid.scrollTop) * app.pixelRatio)

@@ -13,6 +13,7 @@
     app.currentZoom = 100;
     app.currentZoomRatio = 1;
     app.pixelRatio = 1;
+    app.tool = 'none';
 
     function drawImageOnCanvas(img) {
         app.originalWidth = img.width;
@@ -78,4 +79,10 @@
         });
     });
 
+    util.listen(window, 'keydown', function(e) {
+        if (e.keyCode === 27) { //esc
+            util.showMenu('mainMenu');
+            app.tool = 'none';
+        }
+    });
 })(this);

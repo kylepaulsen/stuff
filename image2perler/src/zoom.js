@@ -40,6 +40,24 @@
     util.listen(window, 'resize', function() {
         app.setZoom(app.currentZoom);
     });
+    util.listen(window, 'wheel', function(e) {
+        if (e.shiftKey) {
+            e.preventDefault();
+            const oldZoom = app.currentZoom;
+            const zoomAmount = Math.floor(oldZoom / 10);
+            if (e.deltaY > 0) {
+                // zoom out.
+                app.setZoom(oldZoom - zoomAmount);
+            } else {
+                // zoom in.
+                app.setZoom(oldZoom + zoomAmount);
+            }
+            const zoomRatio = app.currentZoom / oldZoom;
+            const view = ui.mid;
+            view.scrollLeft = (view.scrollLeft + e.pageX) * zoomRatio - e.pageX;
+            view.scrollTop = (view.scrollTop + e.pageY) * zoomRatio - e.pageY;
+        }
+    });
 
     zoomRange.value = 100;
 

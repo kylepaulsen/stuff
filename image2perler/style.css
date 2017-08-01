@@ -40,7 +40,6 @@ body {
     border-bottom: 2px solid #000;
     overflow: hidden;
     background: #fff;
-    flex: 0 0 50px;
 }
 
 #mid {
@@ -89,10 +88,6 @@ body {
     display: none;
 }
 
-#cropMenu div {
-    float: right;
-}
-
 #cropMenu input {
     width: 60px;
 }
@@ -101,8 +96,47 @@ body {
     display: none;
 }
 
-#transparentMenu div {
-    float: right;
+#paintMenu {
+    display: none;
+}
+
+#paintMenuFlex {
+    display: flex;
+}
+
+#paintMenu label {
+    width: 80px;
+    display: inline-block;
+    text-align: center;
+    background: #ddd;
+    margin-right: 8px;
+    cursor: pointer;
+}
+
+#paintMenu input[type="radio"] {
+    vertical-align: top;
+    cursor: pointer;
+}
+
+#currentColor {
+    width: 40px;
+    height: 40px;
+    border: 1px solid #000;
+    margin-right: 10px;
+}
+
+#colorSelect {
+    flex: 1;
+    font-size: 0;
+}
+
+.selectableColor {
+    display: inline-block;
+    width: 20px;
+    height: 20px;
+    margin: 0 4px 4px 0;
+    border: 1px solid #000;
+    cursor: pointer;
 }
 
 #zoomSpan {
@@ -120,6 +154,11 @@ body {
 #zoomRange {
     width: 400px;
 }
+
+.rightMenu {
+    float: right;
+}
+
 
 .noselect {
     -webkit-touch-callout: none; /* iOS Safari */

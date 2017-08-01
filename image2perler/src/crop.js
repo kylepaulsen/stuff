@@ -16,16 +16,14 @@
     const ctx = canvas.getContext('2d');
     const cropCtx = cropCanvas.getContext('2d');
 
-    let inCropMode = false;
     let cropSquareColor = '#000000';
     let currentColor = 0;
-
 
     const updateCropRectangle = function() {
         const x = parseInt(cropX.value);
         const y = parseInt(cropY.value);
-        const w = parseInt(cropWidth.value);
-        const h = parseInt(cropHeight.value);
+        const w = parseInt(cropWidth.value) - 1;
+        const h = parseInt(cropHeight.value) - 1;
         if (!isNaN(x) && !isNaN(y) && !isNaN(w) && !isNaN(h)) {
             app.util.clearCanvas(cropCtx);
             cropCtx.fillStyle = cropSquareColor;
@@ -44,16 +42,16 @@
 
         updateCropRectangle();
         util.showMenu('cropMenu');
-        inCropMode = true;
+        app.tool = 'crop';
     });
 
-    util.listen(ui.cancelCropBtn, 'click', function() {
+    const cancelCrop = function() {
         cropCanvas.style.display = 'none';
         util.showMenu('mainMenu');
-        inCropMode = false;
-    });
+        app.tool = 'none';
+    };
 
-    util.listen(ui.confirmCropBtn, 'click', function() {
+    const applyCrop = function() {
         const x = parseInt(cropX.value);
         const y = parseInt(cropY.value);
         const w = parseInt(cropWidth.value);
@@ -65,10 +63,21 @@
         canvas.width = w;
         canvas.height = h;
         ctx.putImageData(img, 0, 0);
-        cropCanvas.style.display = 'none';
-        util.showMenu('mainMenu');
-        inCropMode = false;
+        cancelCrop();
         app.setZoom(app.currentZoom);
+    };
+
+    util.listen(ui.cancelCropBtn, 'click', cancelCrop);
+    util.listen(ui.confirmCropBtn, 'click', applyCrop);
+    util.listen(window, 'keydown', function(e) {
+        if (app.tool === 'crop') {
+            if (e.keyCode === 13) { //enter
+                applyCrop();
+            }
+            if (e.keyCode === 27) { //esc
+                cancelCrop();
+            }
+        }
     });
 
     const calculateCropRectangle = function(pt1, pt2) {
@@ -76,10 +85,12 @@
         let width;
         let height;
         if (pt1.x < pt2.x && pt1.y < pt2.y) {
+            // nw to se
             startPoint = pt1;
             width = pt2.x - pt1.x;
             height = pt2.y - pt1.y;
         } else if (pt1.x > pt2.x && pt1.y < pt2.y) {
+            // ne to sw
             width = pt1.x - pt2.x;
             height = pt2.y - pt1.y;
             startPoint = {
@@ -87,10 +98,12 @@
                 y: pt1.y
             };
         } else if (pt1.x > pt2.x && pt1.y > pt2.y) {
+            // se to nw
             startPoint = pt2;
             width = pt1.x - pt2.x;
             height = pt1.y - pt2.y;
         } else {
+            // sw to ne
             width = pt2.x - pt1.x;
             height = pt1.y - pt2.y;
             startPoint = {
@@ -100,8 +113,8 @@
         }
         return {
             startPoint: startPoint,
-            width: width,
-            height: height
+            width: width + 1,
+            height: height + 1
         };
     };
 
@@ -109,7 +122,7 @@
     let firstPoint;
     document.addEventListener('mousedown', function(e) {
         const target = e.target;
-        if (target.nodeName === 'CANVAS') {
+        if (target.nodeName === 'CANVAS' && app.tool === 'crop') {
             mouseDown = true;
             firstPoint = util.getCanvasPixelFromMouseEvent(e);
             cropX.value = firstPoint.x;
@@ -124,7 +137,7 @@
             return;
         }
         const target = e.target;
-        if (target.nodeName === 'CANVAS') {
+        if (target.nodeName === 'CANVAS' && app.tool === 'crop') {
             mouseDown = true;
             const secondPoint = util.getCanvasPixelFromMouseEvent(e);
             const rect = calculateCropRectangle(firstPoint, secondPoint);
@@ -140,7 +153,7 @@
     });
 
     document.addEventListener('keydown', function(e) {
-        if (!inCropMode) {
+        if (app.tool !== 'crop') {
             return;
         }
         e.preventDefault();
@@ -159,7 +172,7 @@
     });
 
     setInterval(function() {
-        if (inCropMode) {
+        if (app.tool === 'crop') {
             currentColor = (currentColor + 24) % 511;
             let realColor = currentColor;
             if (currentColor > 255) {

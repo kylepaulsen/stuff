@@ -1,12 +1,4 @@
 <!doctype html>
-<!--
-Hi! Thanks for looking.
-Feel free to visit my github for better code:
-https://github.com/kylepaulsen
-
-This code is under the MIT license:
-http://opensource.org/licenses/MIT
--->
 <html>
     <head>
         <title>Image2Perler</title>
@@ -22,6 +14,7 @@ http://opensource.org/licenses/MIT
                     <button id="cropBtn">Crop</button>
                     <button id="transparentBtn">Select Transparent Color</button>
                     <button id="convertBtn">Convert To Bead Colors</button>
+                    <button id="paintBtn">Paint</button>
                 </span>
 
                 <span id="cropMenu" class="menu">
@@ -32,7 +25,7 @@ http://opensource.org/licenses/MIT
                         Width: <input id="cropWidth" type="number" min="1">
                         Height: <input id="cropHeight" type="number" min="1">
                     </span>
-                    <div>
+                    <div class="rightMenu">
                         <button id="cancelCropBtn">Cancel</button>
                         <button id="confirmCropBtn">Crop!</button>
                     </div>
@@ -43,8 +36,30 @@ http://opensource.org/licenses/MIT
                     <span style="margin-left: 20px">
                         Select colors that should be transparent with the mouse.
                     </span>
-                    <div>
+                    <div class="rightMenu">
                         <button id="transparentDoneBtn">Done</button>
+                    </div>
+                </span>
+
+                <span id="paintMenu" class="menu">
+                    <div id="paintMenuFlex">
+                        <b>Paint</b>
+                        <div style="margin-left: 20px">
+                            Mode:
+                            <label for="pixelPaintMode">
+                                Pixel <input type="radio" name="paintMode" id="pixelPaintMode" value="pixel" checked="">
+                            </label>
+                            <label for="fillPaintMode">
+                                Fill <input type="radio" name="paintMode" id="fillPaintMode" value="fill">
+                            </label>
+                            <br>
+                            Right click for color copy
+                        </div>
+                        <div id="currentColor" title="Current Color"></div>
+                        <div id="colorSelect"></div>
+                        <div class="rightMenu">
+                            <button id="paintDoneBtn">Done</button>
+                        </div>
                     </div>
                 </span>
             </div>
@@ -61,17 +76,19 @@ http://opensource.org/licenses/MIT
                     Show Grid: <input type="checkbox" id="showGrid">
                 </span>
                 <span id="statsSpan">(0 , 0) = ???</span>
+                <span style="margin-left: 20px">Hold shift and scroll to zoom.</span>
             </div>
         </div>
         <script src="src/picoModal.min.js"></script>
         <!-- build-js -->
         <script src="src/util.js"></script>
+        <script src="src/beads.js"></script>
+        <script src="src/colorDiff.js"></script>
         <script src="src/worker.js"></script>
         <script src="src/crop.js"></script>
+        <script src="src/paint.js"></script>
         <script src="src/zoom.js"></script>
         <script src="src/grid.js"></script>
-        <script src="src/colorDiff.js"></script>
-        <script src="src/beads.js"></script>
         <script src="src/transparentColors.js"></script>
         <script src="src/convertColors.js"></script>
         <script src="src/stats.js"></script>

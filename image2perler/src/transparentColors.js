@@ -9,10 +9,8 @@
     const canvas = ui.canvas;
     const ctx = canvas.getContext('2d');
 
-    let selectColorMode = false;
-
     util.onCanvasClick(function(point) {
-        if (selectColorMode) {
+        if (app.tool === 'transparent') {
             const imageData = ctx.getImageData(0, 0, canvas.width, canvas.height);
             const dataArr = imageData.data;
 
@@ -33,12 +31,12 @@
 
     util.listen(ui.transparentBtn, 'click', function() {
         util.showMenu('transparentMenu');
-        selectColorMode = true;
+        app.tool = 'transparent';
     });
 
     util.listen(ui.transparentDoneBtn, 'click', function() {
         util.showMenu('mainMenu');
-        selectColorMode = false;
+        app.tool = 'none';
     });
 
 })(this);

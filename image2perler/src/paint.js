@@ -172,10 +172,7 @@
                 ui.currentColor.style.background = 'url(bg.png)';
             } else {
                 ui.currentColor.style.background = `rgb(${r}, ${g}, ${b})`;
-                currentColor.r = r;
-                currentColor.g = g;
-                currentColor.b = b;
-                currentColor.transparent = undefined;
+                currentColor = {r, g, b};
             }
         }
     };

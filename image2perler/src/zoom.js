@@ -45,7 +45,8 @@
             e.preventDefault();
             const oldZoom = app.currentZoom;
             const zoomAmount = Math.max(Math.floor(oldZoom / 10), 1);
-            if (e.deltaY > 0) {
+            const scrollAmt = e.deltaY === 0 ? e.deltaX : e.deltaY;
+            if (scrollAmt > 0) {
                 // zoom out.
                 app.setZoom(oldZoom - zoomAmount);
             } else {

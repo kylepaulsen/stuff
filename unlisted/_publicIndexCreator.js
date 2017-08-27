@@ -20,7 +20,7 @@ let indexHTML = `<!DOCTYPE html>
     <meta name="description" content="More of Kyle Paulsen's small projects that were created in an afternoon for fun.">
     <meta name="author" content="Kyle Paulsen">
 
-    <link href='http://fonts.googleapis.com/css?family=Open+Sans:400,300' rel='stylesheet' type='text/css'>
+    <link href='https://fonts.googleapis.com/css?family=Open+Sans:400,300' rel='stylesheet' type='text/css'>
     <link rel="stylesheet" href="../css/style.css">
     <link rel="stylesheet" href="../css/socialMediaIcons.css">
 
@@ -36,9 +36,9 @@ let indexHTML = `<!DOCTYPE html>
                 </a>
             </div>
             <div class="social hideOnMobile">
-                <a class="icon" target="_blank" href="mailto:kyle.a.paulsen@gmail.com">&#xe600;<span class="visuallyhidden">Mail</span></a>
-                <a class="icon" target="_blank" href="http://www.linkedin.com/in/kylepaulsen">&#xe602;<span class="visuallyhidden">LinkedIn</span></a>
-                <a class="icon" target="_blank" href="https://github.com/kylepaulsen">&#xe601;<span class="visuallyhidden">Github</span></a>
+                <a class="icon" target="_blank" href="mailto:kyle.a.paulsen@gmail.com" rel="noopener">&#xe600;<span class="visuallyhidden">Mail</span></a>
+                <a class="icon" target="_blank" href="https://www.linkedin.com/in/kylepaulsen" rel="noopener">&#xe602;<span class="visuallyhidden">LinkedIn</span></a>
+                <a class="icon" target="_blank" href="https://github.com/kylepaulsen" rel="noopener">&#xe601;<span class="visuallyhidden">Github</span></a>
             </div>
         </div>
     </div>

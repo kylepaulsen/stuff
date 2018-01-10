@@ -1,0 +1,300 @@
+<!DOCTYPE html>
+<html>
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width">
+  <title>Turntable Scratch Demo</title>
+  <style>
+    html, body {
+        overflow: hidden;
+        width: 100%;
+        height: 100%;
+        text-align: center;
+        background: #000;
+        color: #fff;
+    }
+    #spin {
+        width: 30vw;
+        height: 30vw;
+        background: #666;
+        margin: 0 auto;
+        margin-top: 40px;
+        border-radius: 20vw;
+        border: 10px solid #fff;
+        will-change: transform;
+        display: flex;
+        align-items: center;
+        font-size: 5vw;
+        font-family: sans-serif;
+        justify-content: center;
+        cursor: -webkit-grab;
+        cursor: grab;
+        user-select: none;
+        box-sizing: border-box;
+        will-change: transform;
+        color: #fff;
+    }
+    #turn {
+        font-size: 30px;
+        margin-top: 20px;
+    }
+    #file {
+        display: none;
+    }
+  </style>
+</head>
+<body>
+  <h3>Turntable Scratch Demo</h3>
+  <button id='load'>Load Sound</button>
+  <input type='file' id='file'>
+  <div id='spin'>Grab Me</div>
+  <button id="turn">Turn On</button>
+
+  <script>
+    const ctx = new AudioContext();
+
+    const sampleRate = 44100;
+
+    let scheduledTime = 0;
+
+    let pcmDataForward;
+    let pcmDataBackward;
+
+    const fileInput = document.querySelector('#file');
+    const turn = document.querySelector('#turn');
+
+    document.querySelector('#load').addEventListener('click', () => {
+        fileInput.click();
+    });
+
+    function avgQueue(length) {
+        let arr = [];
+        for (let x = 0; x < length; x++) {
+            arr.push(0);
+        }
+        let total = 0;
+        let pointer = 0;
+        return (val) => {
+            total += val - arr[pointer];
+            arr[pointer] = val;
+            pointer = (pointer + 1) % length;
+            return total / length;
+        };
+    }
+    const smoothIt = avgQueue(3);
+
+    function createSoundEngine(audioCtx) {
+        const sounds = [];
+
+        const reverseBuffer = (buffer) => {
+            const newBuffer = audioCtx.createBuffer(buffer.numberOfChannels, buffer.length, buffer.sampleRate);
+            for (let channel = 0; channel < buffer.numberOfChannels; channel++) {
+                const oldBuf = buffer.getChannelData(channel);
+                const newBuf = newBuffer.getChannelData(channel);
+                newBuf.set(oldBuf);
+                newBuf.reverse();
+            }
+            return newBuffer;
+        };
+
+        const createSoundSource = (buffer) => {
+            console.time('asd');
+            const revBuffer = reverseBuffer(buffer);
+            console.timeEnd('asd');
+            const duration = buffer.duration;
+            const pub = {};
+            pub.bufferTime = 0;
+            pub.playbackRate = 1;
+            pub.lastUpdate = 0;
+            pub.playing = false;
+            pub.play = (time = 0, timeInSound = 0) => {
+                const source = audioCtx.createBufferSource();
+                source.buffer = pub.playbackRate > 0 ? buffer : revBuffer;
+                source.playbackRate.value = Math.abs(pub.playbackRate);
+                //source.playbackRate.linearRampToValueAtTime(pub.playbackRate, time + 1);
+                pub.bufferTime = timeInSound;
+                pub.lastUpdate = audioCtx.currentTime + time;
+                pub.playing = true;
+                pub.source = source;
+                source.connect(audioCtx.destination);
+                source.start(time, pub.playbackRate > 0 ? timeInSound : Math.max(duration - timeInSound, 0));
+            };
+            pub.stop = () => {
+                pub.source.stop();
+                pub.playing = false;
+            };
+            pub.setPlaybackRate = (rate) => {
+                if (pub.source && pub.playing) {
+                    if (pub.playbackRate > 0 && rate < 0 || pub.playbackRate < 0 && rate > 0) {
+                        // sign change of rate, need to replay to swap buffers.
+                        pub.source.stop();
+                        pub.playbackRate = rate;
+                        pub.play(0, pub.bufferTime);
+                    } else {
+                        pub.playbackRate = rate;
+                        pub.source.playbackRate.value = Math.abs(rate);
+                    }
+                }
+            };
+            pub.update = (newTime) => {
+                if (pub.playing && pub.lastUpdate < newTime) {
+                    pub.bufferTime += (newTime - pub.lastUpdate) * pub.playbackRate;
+                    if (pub.bufferTime < 0) {
+                        pub.bufferTime = 0;
+                    } else if (pub.bufferTime > duration) {
+                        pub.bufferTime = duration;
+                    }
+                    pub.lastUpdate = newTime;
+                }
+            };
+
+            sounds.push(pub);
+            return {
+                play: pub.play,
+                stop: pub.stop,
+                setPlaybackRate: pub.setPlaybackRate,
+                getBufferSource: () => pub.source
+            };
+        };
+
+        setInterval(() => {
+            for (let x = 0, len = sounds.length; x < len; x++) {
+                sounds[x].update(audioCtx.currentTime);
+            }
+        }, 10);
+
+        return {
+            createSoundSource
+        };
+    }
+
+    const soundEngine = createSoundEngine(ctx);
+
+    let sourceSound;
+    const processBuffer = (buffer) => {
+        sourceSound = soundEngine.createSoundSource(buffer);
+        sourceSound.play();
+        turnTableOn = true;
+        turn.textContent = 'Turn Off';
+    };
+
+    fileInput.addEventListener('change', (e) => {
+        const file = e.target.files[0];
+        const context = new OfflineAudioContext(2, 1, sampleRate);
+
+        const reader = new FileReader();
+        reader.onload = function(e) {
+            context.decodeAudioData(e.target.result, processBuffer, function(err) {
+                console.log(err);
+            });
+        };
+        reader.readAsArrayBuffer(file);
+    });
+
+    const spinner = document.querySelector('#spin');
+    spinner.style.transform = 'rotate(0deg)';
+    let mousedown = false;
+    let lastPoint = null;
+    const mouseDownHandler = (e) => {
+        mousedown = true;
+        if (e.pageX === undefined) {
+            e = e.touches[0];
+        }
+        lastPoint = {x: e.pageX, y: e.pageY};
+        if (sourceSound) {
+            sourceSound.setPlaybackRate(0);
+        }
+    };
+    spinner.addEventListener('mousedown', mouseDownHandler);
+    spinner.addEventListener('touchstart', mouseDownHandler);
+
+    let deltaAngle = 0;
+    const rad2ang = 180 / Math.PI;
+    const mouseMoveHandler = (e) => {
+        if (mousedown) {
+            const centerPoint = {
+                x: spinner.offsetLeft + spinner.offsetWidth / 2,
+                y: spinner.offsetTop + spinner.offsetHeight / 2
+            };
+            if (e.pageX === undefined) {
+                e = e.touches[0];
+            }
+            console.log(e.pageX);
+            let lastAngle = Math.atan2(centerPoint.y - lastPoint.y, lastPoint.x - centerPoint.x) * rad2ang;
+            if (lastAngle < 0) {
+                lastAngle += 360;
+            }
+            let angle = Math.atan2(centerPoint.y - e.pageY, e.pageX - centerPoint.x) * rad2ang;
+            if (angle < 0) {
+                angle += 360;
+            }
+            deltaAngle = angle - lastAngle;
+            if (deltaAngle < -180) {
+                deltaAngle += 360;
+            } else if (deltaAngle > 180) {
+                deltaAngle -= 360;
+            }
+            deltaAngle = smoothIt(deltaAngle);
+            lastPoint.x = e.pageX;
+            lastPoint.y = e.pageY;
+            const spinnerAngle = parseFloat(spinner.style.transform.substring(7));
+            spinner.style.transform = `rotate(${spinnerAngle - deltaAngle}deg)`;
+            if (sourceSound) {
+                sourceSound.setPlaybackRate(deltaAngle / 2);
+            }
+        }
+    };
+    window.addEventListener('mousemove', mouseMoveHandler);
+    window.addEventListener('touchmove', mouseMoveHandler);
+
+    const mouseUpHandler = () => {
+        if (mousedown && sourceSound) {
+            platterVel = deltaAngle;
+            sourceSound.setPlaybackRate(platterVel / 2);
+        }
+        mousedown = false;
+    };
+    window.addEventListener('mouseup', mouseUpHandler);
+    window.addEventListener('touchend', mouseUpHandler);
+
+    turn.addEventListener('click', () => {
+        if (turnTableOn) {
+            turnTableOn = false;
+            turn.textContent = 'Turn On';
+        } else {
+            turnTableOn = true;
+            turn.textContent = 'Turn Off';
+        }
+    })
+
+    const platterFriction = 0.9901;
+    const platterAccel = 0.02;
+    let platterVel = 0;
+    let turnTableOn = false;
+    function animatePlatter() {
+        if (!mousedown) {
+            if (turnTableOn) {
+                platterVel += platterAccel;
+            }
+            const spinnerAngle = parseFloat(spinner.style.transform.substring(7));
+            spinner.style.transform = `rotate(${spinnerAngle - platterVel}deg)`;
+            if (sourceSound) {
+                sourceSound.setPlaybackRate(platterVel / 2);
+            }
+        }
+        platterVel *= platterFriction;
+        if (Math.abs(platterVel) < 0.001) {
+            platterVel = 0;
+        }
+        requestAnimationFrame(animatePlatter);
+    }
+    animatePlatter();
+
+    try {
+        fetch('unlisted/scratch_samples.mp3').then(d => d.arrayBuffer()).then(b => {
+            ctx.decodeAudioData(b, processBuffer);
+        }).catch(e => (null));
+    } catch(e) {}
+  </script>
+</body>
+</html>

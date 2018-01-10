@@ -212,6 +212,7 @@
     const rad2ang = 180 / Math.PI;
     const mouseMoveHandler = (e) => {
         if (mousedown) {
+            e.preventDefault();
             const centerPoint = {
                 x: spinner.offsetLeft + spinner.offsetWidth / 2,
                 y: spinner.offsetTop + spinner.offsetHeight / 2

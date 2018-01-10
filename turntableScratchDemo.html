@@ -98,9 +98,7 @@
         };
 
         const createSoundSource = (buffer) => {
-            console.time('asd');
             const revBuffer = reverseBuffer(buffer);
-            console.timeEnd('asd');
             const duration = buffer.duration;
             const pub = {};
             pub.bufferTime = 0;
@@ -223,7 +221,6 @@
             if (e.pageX === undefined) {
                 e = e.touches[0];
             }
-            console.log(e.pageX);
             let lastAngle = Math.atan2(centerPoint.y - lastPoint.y, lastPoint.x - centerPoint.x) * rad2ang;
             if (lastAngle < 0) {
                 lastAngle += 360;

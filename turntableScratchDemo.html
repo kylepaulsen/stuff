@@ -184,6 +184,9 @@
 
         const reader = new FileReader();
         reader.onload = function(e) {
+            if (sourceSound) {
+                sourceSound.stop();
+            }
             context.decodeAudioData(e.target.result, processBuffer, function(err) {
                 console.log(err);
             });

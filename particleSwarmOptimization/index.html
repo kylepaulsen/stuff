@@ -15,13 +15,17 @@
     </style>
 </head>
 <body>
-Timeout: <input type="text" value="50" class="timeout">
-Num Particles: <input type="text" value="20" class="numParticles">
-Max Iterations: <input type="text" value="200" class="maxIters">
-<button class="goBtn">Simulate!</button><br>
-Iteration: <span class="iter"></span><br>
-Best Cost: <span class="bestCost"></span><br>
-Best Pos: <span class="bestPos"></span><br>
+<div>
+    Timeout: <input type="text" value="50" class="timeout">
+    Num Particles: <input type="text" value="20" class="numParticles">
+    Max Iterations: <input type="text" value="200" class="maxIters">
+    <button class="goBtn">Simulate!</button>
+</div>
+<div>
+    Iteration: <span class="iter"></span><br>
+    Best Cost: <span class="bestCost"></span><br>
+    Best Pos: <span class="bestPos"></span><br>
+</div>
 <canvas width="500" height="500" class="canvas"></canvas>
 <canvas width="500" height="500" class="canvas2"></canvas>
 <script src="particleSwarmOptimization.js"></script>

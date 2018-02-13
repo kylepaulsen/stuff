@@ -1,0 +1,136 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <meta charset="utf-8">
+    <meta name="viewport" content="width=device-width">
+    <title>Particle Swarm Optimization</title>
+    <style>
+        canvas {
+            image-rendering: pixelated;
+            position: absolute;
+            top: 100px;
+            left: 0;
+            width: 1000px;
+        }
+    </style>
+</head>
+<body>
+Timeout: <input type="text" value="50" class="timeout">
+Num Particles: <input type="text" value="20" class="numParticles">
+Max Iterations: <input type="text" value="200" class="maxIters">
+<button class="goBtn">Simulate!</button><br>
+Iteration: <span class="iter"></span><br>
+Best Cost: <span class="bestCost"></span><br>
+Best Pos: <span class="bestPos"></span><br>
+<canvas width="500" height="500" class="canvas"></canvas>
+<canvas width="500" height="500" class="canvas2"></canvas>
+<script src="particleSwarmOptimization.js"></script>
+<script>
+    function randomNumber(low, high) {
+        return Math.random() * (high - low) + low;
+    }
+
+    function rastrigin3D(x, y) {
+        return 20 + (x * x - 10 * Math.cos(2 * Math.PI * x)) + (y * y - 10 * Math.cos(2 * Math.PI * y));
+    }
+
+    const rastriginCanvas = document.querySelector('.canvas');
+    const canvas = document.querySelector('.canvas2');
+    const canvasW = rastriginCanvas.width;
+    const canvasH = rastriginCanvas.height;
+    const ctx = canvas.getContext('2d');
+
+    const windowVars = {
+        xmin: -5,
+        xmax: 5,
+        ymin: -5,
+        ymax: 5
+    };
+    windowVars.xAxis = windowVars.xmax - windowVars.xmin;
+    windowVars.yAxis = windowVars.ymax - windowVars.ymin;
+
+    {
+        const ctx = rastriginCanvas.getContext('2d');
+        const imageData = ctx.getImageData(0, 0, canvasW, canvasH);
+        const pixelData = imageData.data;
+        for (let py = 0; py < canvasH; py++) {
+            for (let px = 0; px < canvasW; px++) {
+                const x = px * windowVars.xAxis / canvasW + windowVars.xmin;
+                const y = py * windowVars.yAxis / canvasH + windowVars.ymin;
+                const shade = Math.max(Math.round(255 * (50 - rastrigin3D(x, y)) / 50), 0);
+                pixelData[(py * canvasW + px) * 4 + 3] = shade;
+            }
+        }
+        ctx.putImageData(imageData, 0, 0);
+    }
+
+    const bestCostText = document.querySelector('.bestCost');
+    const bestPosText = document.querySelector('.bestPos');
+    const iterText = document.querySelector('.iter');
+
+    let stepTimeout;
+    function runSimulation(speed = 100, numParticles = 20, maxIters = 200) {
+        const pso = particleSwarmOptimization({
+            particles: numParticles,
+            particleSize: 2,
+            initializeParticle: () => [randomNumber(-5, 5), randomNumber(-5, 5)],
+            //costFunction: (position) => leastSquares(fakeData, position),
+            costFunction: (position) => rastrigin3D(position[0], position[1]),
+            // getSpreadFunction: (spread) => {
+            //     //console.log(spread);
+            //     const percentComplete = iter / maxIters;
+            //     if (spread < 2 && percentComplete < 0.8) {
+            //         console.log('resetting particles!!!');
+            //         pso.resetParticles();
+            //     }
+            // },
+            followLeaderChance: 1
+        });
+
+        let result;
+        let iter = 0;
+
+        function doStep() {
+            result = pso.step();
+
+            ctx.clearRect(0, 0, canvasW, canvasH);
+            const particles = pso.getParticles();
+            ctx.fillStyle = '#0000ff';
+            for (let x = 0; x < particles.length; x++) {
+                const particlePos = particles[x].position;
+                const px = (particlePos[0] - windowVars.xmin) * canvasW / windowVars.xAxis;
+                const py = (particlePos[1] - windowVars.ymin) * canvasH / windowVars.yAxis;
+                ctx.fillRect(px - 1, py - 1, 3, 3);
+            }
+            ctx.fillStyle = '#ff0000';
+            const bestPos = result.bestPosition;
+            const px = (bestPos[0] - windowVars.xmin) * canvasW / windowVars.xAxis;
+            const py = (bestPos[1] - windowVars.ymin) * canvasH / windowVars.yAxis;
+            ctx.fillRect(px - 1, py - 1, 3, 3);
+
+            iterText.textContent = iter + 1;
+            bestCostText.textContent = result.bestCost;
+            bestPosText.textContent = bestPos.join(', ');
+
+            iter++;
+            if (iter < maxIters) {
+                stepTimeout = setTimeout(doStep, speed);
+            }
+        }
+        doStep();
+    }
+    runSimulation();
+
+    const timeout = document.querySelector('.timeout');
+    const numParticles = document.querySelector('.numParticles');
+    const maxIters = document.querySelector('.maxIters');
+    document.querySelector('.goBtn').addEventListener('click', () => {
+        if (stepTimeout) {
+            clearTimeout(stepTimeout);
+        }
+        runSimulation(parseInt(timeout.value), parseInt(numParticles.value), parseInt(maxIters.value));
+    });
+
+    </script>
+</body>
+</html>

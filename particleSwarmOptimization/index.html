@@ -74,20 +74,33 @@
 
     let stepTimeout;
     function runSimulation(speed = 100, numParticles = 20, maxIters = 200) {
+        let allTimeBestPos;
+        let allTimeBestCost = Infinity;
+        let rememberedBestPos = false;
         const pso = particleSwarmOptimization({
             particles: numParticles,
             particleSize: 2,
-            initializeParticle: () => [randomNumber(-5, 5), randomNumber(-5, 5)],
+            initializeParticle: () => [randomNumber(-500, 500), randomNumber(-500, 500)],
             //costFunction: (position) => leastSquares(fakeData, position),
             costFunction: (position) => rastrigin3D(position[0], position[1]),
-            // getSpreadFunction: (spread) => {
-            //     //console.log(spread);
-            //     const percentComplete = iter / maxIters;
-            //     if (spread < 2 && percentComplete < 0.8) {
-            //         console.log('resetting particles!!!');
-            //         pso.resetParticles();
-            //     }
-            // },
+            averageBestCostDeltaFunction: (averageCostDelta, cost, position) => {
+                //console.log(spread);
+                if (cost < allTimeBestCost) {
+                    allTimeBestCost = cost;
+                    allTimeBestPos = position;
+                }
+                const percentComplete = iter / maxIters;
+                const almostDone = percentComplete > 0.6;
+                if (averageCostDelta < 1 && !almostDone) {
+                    console.log('resetting particles!!!');
+                    pso.resetGlobalBestCost();
+                    pso.resetParticles();
+                } else if (almostDone && !rememberedBestPos) {
+                    console.log('remembering best pos!');
+                    pso.setBestPosition(allTimeBestPos);
+                    rememberedBestPos = true;
+                }
+            },
             followLeaderChance: 1
         });
 
@@ -95,7 +108,8 @@
         let iter = 0;
 
         function doStep() {
-            result = pso.step();
+            pso.step();
+            result = pso.results();
 
             ctx.clearRect(0, 0, canvasW, canvasH);
             const particles = pso.getParticles();

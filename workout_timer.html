@@ -3,9 +3,20 @@
     <title>Workout Timer</title>
     <meta name='viewport' content='width=device-width, initial-scale=1.0, user-scalable=no'>
     <style>
+    * {
+        font-family: sans-serif;
+    }
+    button {
+        cursor: pointer;
+    }
     body {
-        margin: 0;
-        padding: 6px 0 6px 6px;
+        padding: 0;
+        margin: 6px 0 56px 6px;
+        background: #ddd;
+    }
+    #workoutName {
+        font-weight: bold;
+        font-size: 18px;
     }
     #workoutContainer {
         display: none;
@@ -18,6 +29,18 @@
         border: 1px solid #000000;
         background: #ffffff;
         padding: 20px;
+    }
+    #exercises {
+        min-height: 100px;
+        max-width: 500px;
+        width: 100%;
+        background: #fff;
+        margin: 12px 0 6px 0;
+        padding: 8px;
+        line-height: 22px;
+    }
+    #savedWorkouts {
+        max-width: 500px;
     }
     #overlay {
         display: none;
@@ -40,70 +63,64 @@
     #stopWorkoutBtn {
         margin-top: 0;
     }
-    #loadWorkoutSelect {
-        margin-top: 10px;
-    }
     #screenLockVid {
         display: none;
-    }
-    .sit {
-        flex: 0 1 auto;
-    }
-    .sit2 {
-        flex: 0 1 144px;
-    }
-    .fill {
-        flex: 1 1 auto;
-        padding: 0 6px;
     }
     .vflex {
         display: flex;
         flex-direction: column;
     }
     .workoutContainerTop {
-        flex: 0 0 20%;
+        flex: 0 0 20%;
     }
     .workoutContainerMiddle {
         display: flex;
         justify-content: center;
         align-items: center;
         font-size: 160px;
-        flex: 1 1 70%;
+        flex: 1 1 70%;
     }
     .workoutContainerBottom {
         text-align: center;
-        flex: 0 0 10%;
-    }
-    .nameInput {
-        width: 100%;
+        flex: 0 0 10%;
     }
     .btn {
-        cursor: pointer;
         min-width: 120px;
         height: 50px;
         margin-top: 20px;
     }
-    .exercise {
-        margin-top: 10px;
-        display: flex;
-        width: 100%;
+    .voice {
+        margin: 20px 0;
     }
-    .secondsInput {
-        width: 50px;
+    .savedWorkout {
+        display: flex;
+        flex-direction: row;
+    }
+    .savedWorkoutName {
+        flex: 1 1 auto;
+        cursor: pointer;
+        padding: 10px 0;
+    }
+    .exercise {
+        color: #000;
+        font-weight: bold;
+    }
+    .rest {
+        color: #999;
+        font-weight: normal;
     }
     </style>
 </head>
 <body>
-    Workout Name: <input id='workoutNameInput' value='7 Minute Workout'>
-    <div id='exercises'></div>
-    <div style='margin-top: 20px;'>Rest Seconds: <input id='restSecondsInput' type='number' value='10'></div>
-    <button id='addExerBtn' class='btn'>Add Exercise</button>
+    <h1>Workout Timer</h1>
+    <span id='workoutName'>7 Minute Workout</span>
+    <div id='exercises' contenteditable="true"></div>
+    <div><button id='addRestBtn'>Add Rest</button></div>
     <button id='saveWorkoutBtn' class='btn'>Save Workout</button>
-    <button id='deleteWorkoutBtn' class='btn'>Delete Workout</button>
-    <select id='loadWorkoutSelect'></select><br>
     <button id='startWorkoutBtn' class='btn'>Start Workout</button>
-    <br><br>
-    Voice: <select id='voiceSelect'></select>
+    <div class="voice">Voice: <select id='voiceSelect'></select></div>
+    <h2>Saved Workouts</h2>
+    <div id="savedWorkouts"></div>
     <div id='overlay'></div>
     <div id='workoutContainer'>
         <div class='vflex'>
@@ -125,8 +142,13 @@
     </video>
 
     <script>
-    (function() {
+    {
         const ui = {};
+
+        const allIds = document.querySelectorAll('[id]');
+        for (let x = 0; x < allIds.length; x++) {
+            ui[allIds[x].id] = allIds[x];
+        }
 
         let voices = [];
 
@@ -149,76 +171,132 @@
         }
         const checkForVoicesIntervalId = setInterval(checkForVoices, 100);
 
-        const allIds = document.querySelectorAll('[id]');
-        for (let x = 0; x < allIds.length; x++) {
-            ui[allIds[x].id] = allIds[x];
-        }
-
-        const exerciseTemplate = `
-        <div class='sit'>Name: </div>
-        <div class='fill'><input class='nameInput' class='nameInput' value='{name}'></div>
-        <div class='sit2'>Time: <input class='secondsInput' value='{seconds}' type='number'>
-        <button class='removeExerciseBtn'>×</button></div>
-        `;
-
-        let allSavedWorkouts = JSON.parse(localStorage.savedWorkouts || '[]');
-        function populateLoadDropdown() {
-            let loadDropdownHTML = '<option value="-1">Load Workout...</option>';
-            allSavedWorkouts.forEach(function(workout, idx) {
-                loadDropdownHTML += `<option value='${idx}'>${workout.name}</option>`;
-            });
-            ui.loadWorkoutSelect.innerHTML = loadDropdownHTML;
-        }
-        populateLoadDropdown();
-
-        function loadWorkout(e) {
-            const workoutToLoad = allSavedWorkouts[ui.loadWorkoutSelect.selectedIndex - 1];
-            ui.workoutNameInput.value = workoutToLoad.name;
-            ui.restSecondsInput.value = workoutToLoad.restSeconds;
-            ui.exercises.innerHTML = '';
-            workoutToLoad.exercises.forEach(function(exercise) {
-                addExercise(exercise.name, exercise.seconds);
-            });
-            ui.loadWorkoutSelect.value = '-1';
-        }
-
-        function parseWorkoutObject() {
-            const exercises = parseExercises().filter(function(exercise) {
-                return exercise.name !== 'Rest' && exercise.name !== 'Get Ready';
-            });
-            return {
-                name: ui.workoutNameInput.value,
-                restSeconds: ui.restSecondsInput.value,
-                exercises: exercises
+        function debounce(fn, delay) {
+            let timeout;
+            return () => {
+                if (timeout) {
+                    clearTimeout(timeout);
+                }
+                timeout = setTimeout(fn, delay);
             };
         }
 
-        function deleteWorkout() {
-             const exercisesObjJson = JSON.stringify(parseWorkoutObject());
-             allSavedWorkouts = allSavedWorkouts.filter(function(workout) {
-                return JSON.stringify(workout) !== exercisesObjJson;
-             });
-             localStorage.savedWorkouts = JSON.stringify(allSavedWorkouts);
-             ui.exercises.innerHTML = '';
-             ui.workoutNameInput.value = '';
-             ui.restSecondsInput.value = '10';
-             populateLoadDropdown();
-             addExercise();
+        function getNumber(str, defaultNum) {
+            let num = parseInt(str);
+            if (isNaN(num)) {
+                return defaultNum;
+            }
+            return num;
+        }
+
+        const defaultWorkout = `
+            Jumping Jacks, 30
+            Rest, 10
+            Wall Sit, 30
+            Rest, 10
+            Push ups, 30
+            Rest, 10
+            Crunches, 30
+            Rest, 10
+            Step ups, 30
+            Rest, 10
+            Squats, 30
+            Rest, 10
+            Triceps Dips, 30
+            Rest, 10
+            Plank, 30
+            Rest, 10
+            High Knees Running In Place, 30
+            Rest, 10
+            Lunge, 30
+            Rest, 10
+            Push up and Rotation, 30
+            Rest, 10
+            Side Plank, 30
+        `.trim().split('\n').map(e => e.trim()).join('\n');
+
+        const defaultWorkoutData = parseExercises(defaultWorkout);
+
+        let allSavedWorkouts = JSON.parse(localStorage.savedWorkouts || '[]');
+        allSavedWorkouts.unshift({name: '7 Minute Workout', exercises: defaultWorkoutData});
+        function populateSavedWorkouts() {
+            ui.savedWorkouts.innerHTML = '';
+            const savedWorkoutTemplate = `
+                <div class="savedWorkout">
+                    <button class="savedWorkoutName"></button>
+                    <button class="deleteWorkoutBtn">Delete</button>
+                </div>
+            `;
+            allSavedWorkouts.forEach(function(workout, idx) {
+                const tempDiv = document.createElement('div');
+                tempDiv.innerHTML = savedWorkoutTemplate;
+                const savedWorkoutEl = tempDiv.children[0];
+                savedWorkoutEl.querySelector('.savedWorkoutName').textContent = workout.name;
+                savedWorkoutEl.dataset.workoutId = idx;
+                if (idx === 0) {
+                    savedWorkoutEl.querySelector('.deleteWorkoutBtn').remove();
+                }
+                ui.savedWorkouts.appendChild(savedWorkoutEl);
+            });
+        }
+        populateSavedWorkouts();
+
+        function loadWorkout(id) {
+            const workoutToLoad = allSavedWorkouts[id];
+            ui.workoutName.textContent = workoutToLoad.name;
+            setExercises(workoutToLoad.exercises);
+            localStorage.lastWorkoutName = workoutToLoad.name;
+            localStorage.lastWorkout = ui.exercises.innerText;
+        }
+
+        function setExercises(exercises) {
+            ui.exercises.innerHTML = '';
+            exercises.forEach(e => {
+                const div = document.createElement('div');
+                div.classList.add('exercise');
+                div.textContent = `${e.name}, ${e.seconds}`;
+                if (e.name.toLowerCase() === 'rest') {
+                    div.classList.add('rest');
+                }
+                ui.exercises.appendChild(div);
+            })
+        }
+
+        function parseExercises(str) {
+            const exercises = [];
+            if (!str) {
+                str =  ui.exercises.innerText;
+            }
+            str.trim().split('\n').forEach(e => {
+                const eParts = e.split(',');
+                const last = eParts.pop();
+                const seconds = Math.max(getNumber(last.trim(), 30), 0);
+                const name = eParts.join(',');
+                if (name) {
+                    exercises.push({
+                        name,
+                        seconds
+                    });
+                }
+            });
+            return exercises;
         }
 
         function saveWorkout() {
-            allSavedWorkouts.push(parseWorkoutObject());
+            const exercises = parseExercises();
+            const name = prompt('Enter name for workout');
+            if (exercises.length && name) {
+                allSavedWorkouts.push({
+                    name,
+                    exercises
+                })
+            }
+            const defaultWorkout = allSavedWorkouts.shift();
             localStorage.savedWorkouts = JSON.stringify(allSavedWorkouts);
-            populateLoadDropdown();
-        }
-
-        function addExercise(name, seconds) {
-            const div = document.createElement('div');
-            div.className = 'exercise';
-            div.innerHTML = exerciseTemplate.replace('{name}', name.replace(/'/g, '&#39;') || '')
-                .replace('{seconds}', seconds || 30);
-
-            ui.exercises.appendChild(div);
+            allSavedWorkouts.unshift(defaultWorkout);
+            populateSavedWorkouts();
+            ui.workoutName.textContent = name;
+            localStorage.lastWorkoutName = name;
         }
 
         let lastMsg;
@@ -251,10 +329,12 @@
                 return;
             }
             ui.currentExerciseTime.textContent = time;
+            const currentExercise = exercises[currentExerciseIdx];
+            const nextUpExercise = exercises[currentExerciseIdx + 1];
 
-            const isExercise = currentExerciseIdx % 2 === 1;
-            if (time === Math.floor(exercises[currentExerciseIdx].seconds / 2) && isExercise &&
-                exercises[currentExerciseIdx].seconds > 7) {
+            const isExercise = currentExercise.name.toLowerCase() !== 'rest';
+            const nextIsRest = nextUpExercise && nextUpExercise.name.toLowerCase() === 'rest';
+            if (time === Math.floor(currentExercise.seconds / 2) && isExercise && currentExercise.seconds > 7) {
                 say('Halfway done!');
             } else if (time === 4) {
                 primeSpeechSynthesis();
@@ -267,7 +347,7 @@
                     if (currentExerciseIdx >= exercises.length - 1) {
                         say('Workout complete!');
                         stopWorkout();
-                    } else if (isExercise) {
+                    } else if (nextIsRest) {
                         say(`Now rest! Up next, ${exercises[currentExerciseIdx + 2].name}`);
                     } else {
                         say('Go!');
@@ -296,7 +376,7 @@
             currentExerciseIdx++;
             const currentExercise = exercises[currentExerciseIdx];
             let nextUp = '';
-            if (currentExercise.name === 'Rest' || currentExercise.name === 'Get Ready') {
+            if (currentExercise.name.toLowerCase() === 'rest' || currentExerciseIdx === 0) {
                 nextUp = ` (Next up: ${exercises[currentExerciseIdx + 1].name})`;
             }
             if (currentExercise) {
@@ -307,37 +387,13 @@
             }
         }
 
-        function getNumber(str, defaultNum) {
-            let num = parseInt(str);
-            if (isNaN(num)) {
-                return defaultNum;
-            }
-            return num;
-        }
-
-        function parseExercises() {
-            const exercises = [{name: 'Get Ready', seconds: 6}];
-            const restSeconds = getNumber(ui.restSecondsInput.value, 10);
-            const exerciseElements = ui.exercises.children;
-            for (let x = 0; x < exerciseElements.length; x++) {
-                if (x > 0) {
-                    exercises.push({name: 'Rest', seconds: restSeconds});
-                }
-                const exerciseEl = exerciseElements[x];
-                const nameEl = exerciseEl.querySelector('.nameInput');
-                const secondsEl = exerciseEl.querySelector('.secondsInput');
-                let seconds = getNumber(secondsEl.value, 30);
-                exercises.push({name: nameEl.value || 'Untitled', seconds: seconds});
-            }
-            return exercises;
-        }
-
         function startWorkout() {
             document.body.scrollTop = 0;
             ui.workoutContainer.style.display = 'block';
             ui.overlay.style.display = 'block';
 
             exercises = parseExercises();
+            exercises.unshift({name: 'Get Ready', seconds: 6});
 
             currentExerciseIdx = -1;
             nextExercise();
@@ -351,40 +407,76 @@
             ui.screenLockVid.pause();
             ui.workoutContainer.style.display = 'none';
             ui.overlay.style.display = 'none';
+            lastMsg = '';
             worker.removeEventListener('message', updateTime);
-
         }
 
-        window.addEventListener('click', function(e) {
+        ui.savedWorkouts.addEventListener('click', function(e) {
             const target = e.target;
-            if (target.className === 'removeExerciseBtn') {
-                const exercise = target.parentNode.parentNode;
-                ui.exercises.removeChild(exercise);
+            if (target.className === 'deleteWorkoutBtn') {
+                const id = parseInt(target.parentNode.dataset.workoutId);
+                allSavedWorkouts.splice(id, 1);
+                const defaultWorkout = allSavedWorkouts.shift();
+                localStorage.savedWorkouts = JSON.stringify(allSavedWorkouts);
+                allSavedWorkouts.unshift(defaultWorkout);
+                populateSavedWorkouts();
+            } else if (target.className === 'savedWorkoutName') {
+                const id = parseInt(target.parentNode.dataset.workoutId);
+                loadWorkout(id);
             }
-        })
-
-        ui.addExerBtn.addEventListener('click', function() {
-            addExercise('', 30);
         });
+
         ui.startWorkoutBtn.addEventListener('click', startWorkout);
         ui.stopWorkoutBtn.addEventListener('click', stopWorkout);
-        ui.loadWorkoutSelect.addEventListener('change', loadWorkout);
         ui.saveWorkoutBtn.addEventListener('click', saveWorkout);
-        ui.deleteWorkoutBtn.addEventListener('click', deleteWorkout);
+        ui.addRestBtn.addEventListener('click', () => {
+            const selection = window.getSelection();
+            let currentLineEl = selection.baseNode;
+            if (currentLineEl.nodeName !== '#text' && currentLineEl.textContent.trim().length === 0) {
+                currentLineEl.className = 'rest';
+                currentLineEl.textContent = 'Rest, 30';
+                return;
+            } else if (currentLineEl.nodeName === '#text') {
+                currentLineEl = currentLineEl.parentElement;
+            }
+            const nextLine = currentLineEl.nextElementSibling;
+            const newLine = document.createElement('div');
+            newLine.className = 'rest';
+            newLine.textContent = 'Rest, 30';
+            if (nextLine) {
+                ui.exercises.insertBefore(newLine, nextLine);
+            } else {
+                ui.exercises.appendChild(newLine);
+            }
+        });
 
-        addExercise('Jumping Jacks', 30);
-        addExercise('Wall Sit', 30);
-        addExercise('Push ups', 30);
-        addExercise('Crunches', 30);
-        addExercise('Step ups', 30);
-        addExercise('Squats', 30);
-        addExercise('Triceps Dips', 30);
-        addExercise('Plank', 30);
-        addExercise('High Knees Running In Place', 30);
-        addExercise('Lunge', 30);
-        addExercise('Push up and Rotation', 30);
-        addExercise('Side Plank', 30);
-    })();
+        ui.exercises.addEventListener('keyup', () => {
+            for (let n of ui.exercises.childNodes) {
+                if (n.nodeName === '#text') {
+                    const textDiv = document.createElement('div');
+                    textDiv.textContent = n.textContent;
+                    ui.exercises.insertBefore(textDiv, n);
+                    n.remove();
+                }
+            }
+            if (ui.exercises.innerText.trim().length === 0) {
+                ui.exercises.innerHTML = '<div><br></div>';
+            }
+        });
+        ui.exercises.addEventListener('keyup', debounce(() => {
+            for (let n of ui.exercises.children) {
+                if (n.textContent.toLowerCase().includes('rest')) {
+                    n.className = 'rest';
+                } else {
+                    n.className = 'exercise';
+                }
+            }
+            localStorage.lastWorkout = ui.exercises.innerText;
+        }, 100));
+
+        ui.workoutName.textContent = localStorage.lastWorkoutName || '7 Minute Workout';
+        setExercises(parseExercises(localStorage.lastWorkout || defaultWorkout));
+    }
     </script>
 </body>
 </html>

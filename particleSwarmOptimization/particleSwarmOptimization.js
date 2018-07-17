@@ -6,7 +6,8 @@ function particleSwarmOptimization(options) {
         initializeParticle: undefined, // function to create particle position (required)
         followLeaderChance: 1, // odds of any particle being considered as a leader.
                                 // Value < 1 is helpful for preventing getting "stuck" at a local minimum.
-        getSpreadFunction: undefined // a function to examine the "spread" of the particles. A low spread is close to 0.
+        getSpreadFunction: undefined, // a function to examine the "spread" of the particles. A low spread is close to 0.
+        averageBestCostDeltaFunction: undefined // a function to examine the average best cost delta.
     };
     const defaultVelocityDecay = 0.8;
     const defaultPersonalGravity = 0.4;
@@ -20,14 +21,42 @@ function particleSwarmOptimization(options) {
     const numParticles = options.particles;
     const particleSize = options.particleSize;
     const getSpreadFunction = options.getSpreadFunction;
+    const averageBestCostDeltaFunction = options.averageBestCostDeltaFunction;
     const defaultVelocityDecayVector = (new Array(numParticles)).fill(defaultVelocityDecay);
     const followLeaderChance = options.followLeaderChance;
 
-    let globalBestCost;
+    let savedGlobalBestCost = Infinity; // if a reset is called, we save the last globalBestCost.
+    let globalBestCost = Infinity;
+    let lastGlobalBestCost;
+    let savedGlobalBestPosition;
     let globalBestPosition;
     let particles;
 
-    globalBestCost = Infinity;
+    const recentDeltaCostAverage = (function() {
+        let arr = [];
+        const queueLength = 10;
+        for (let x = 0; x < queueLength; x++) {
+            arr.push(0);
+        }
+        let total = 0;
+        let pointer = 0;
+        return (val) => {
+            total += val - arr[pointer];
+            arr[pointer] = val;
+            pointer = (pointer + 1) % queueLength;
+            return total / queueLength;
+        };
+    })();
+
+    // reset the globalBestCost but keep the best answer.
+    const resetGlobalBestCost = function() {
+        if (globalBestCost < savedGlobalBestCost) {
+            savedGlobalBestCost = globalBestCost;
+            savedGlobalBestPosition = globalBestPosition;
+        }
+        globalBestCost = Infinity;
+    };
+
     const resetParticles = function(initializeParticleFunction = initializeParticle) {
         particles = [];
         // initialize particles...
@@ -60,6 +89,8 @@ function particleSwarmOptimization(options) {
         let personalGravity = options.personalGravity;
         let globalGravity = options.globalGravity;
         let velocityDecay = options.velocityDecay;
+        let newBestCost = false;
+        lastGlobalBestCost = globalBestCost;
         if (!personalGravity) {
             personalGravity = defaultPersonalGravity;
         }
@@ -107,6 +138,7 @@ function particleSwarmOptimization(options) {
                 if (cost < globalBestCost && followLeaderChance >= 1) {
                     globalBestCost = cost;
                     globalBestPosition = positionCopy;
+                    newBestCost = true;
                 }
             }
         }
@@ -148,10 +180,15 @@ function particleSwarmOptimization(options) {
                 if (updatingParticle.bestCost < globalBestCost) {
                     globalBestCost = updatingParticle.bestCost;
                     globalBestPosition = updatingParticle.bestPosition.slice();
+                    newBestCost = true;
                 }
 
                 updatingParticle.leaderPosition = leaderParticle.bestPosition;
             }
+        }
+
+        if (averageBestCostDeltaFunction && newBestCost) {
+            averageBestCostDeltaFunction(recentDeltaCostAverage(lastGlobalBestCost - globalBestCost), globalBestCost, globalBestPosition);
         }
 
         return {
@@ -160,10 +197,22 @@ function particleSwarmOptimization(options) {
         };
     };
 
+    // this function is helpful for "remembering" a saved global best position.
+    const setBestPosition = function(position) {
+        globalBestPosition = position;
+        globalBestCost = costFunction(position);
+    };
+
     const results = function() {
+        let bestCost = globalBestCost;
+        let bestPosition = globalBestPosition;
+        if (savedGlobalBestCost < globalBestCost) {
+            bestCost = savedGlobalBestCost;
+            bestPosition = savedGlobalBestPosition;
+        }
         return {
-            bestCost: globalBestCost,
-            bestPosition: globalBestPosition
+            bestCost,
+            bestPosition
         };
     };
 
@@ -172,6 +221,8 @@ function particleSwarmOptimization(options) {
     return {
         step,
         resetParticles,
+        resetGlobalBestCost,
+        setBestPosition,
         results,
         getParticles
     };

@@ -5,18 +5,20 @@
     <style>
     * {
         font-family: sans-serif;
+        box-sizing: border-box;
     }
     button {
         cursor: pointer;
     }
     body {
         padding: 0;
-        margin: 6px 0 56px 6px;
+        margin: 6px 6px 56px 6px;
         background: #ddd;
     }
     #workoutName {
         font-weight: bold;
         font-size: 18px;
+        margin-bottom: 8px;
     }
     #workoutContainer {
         display: none;
@@ -35,7 +37,7 @@
         max-width: 500px;
         width: 100%;
         background: #fff;
-        margin: 12px 0 6px 0;
+        margin: 4px 0 6px 0;
         padding: 8px;
         line-height: 22px;
     }
@@ -62,6 +64,9 @@
     }
     #stopWorkoutBtn {
         margin-top: 0;
+    }
+    #secondsInput {
+        width: 40px;
     }
     #screenLockVid {
         display: none;
@@ -113,9 +118,10 @@
 </head>
 <body>
     <h1>Workout Timer</h1>
-    <span id='workoutName'>7 Minute Workout</span>
+    <div id='workoutName'>7 Minute Workout</div>
+    <div>Exercise, Seconds</div>
     <div id='exercises' contenteditable="true"></div>
-    <div><button id='addRestBtn'>Add Rest</button></div>
+    <div><button id='addRestBtn'>Add Rest</button> <input id="secondsInput" type="number" min="0" value="10"></div>
     <button id='saveWorkoutBtn' class='btn'>Save Workout</button>
     <button id='startWorkoutBtn' class='btn'>Start Workout</button>
     <div class="voice">Voice: <select id='voiceSelect'></select></div>
@@ -411,6 +417,28 @@
             worker.removeEventListener('message', updateTime);
         }
 
+        function addRest() {
+            const selection = window.getSelection();
+            let currentLineEl = selection.baseNode;
+            const restText = 'Rest, ' + getNumber(ui.secondsInput.value, 10);
+            if (currentLineEl.nodeName !== '#text' && currentLineEl.textContent.trim().length === 0) {
+                currentLineEl.className = 'rest';
+                currentLineEl.textContent = restText;
+                return;
+            } else if (currentLineEl.nodeName === '#text') {
+                currentLineEl = currentLineEl.parentElement;
+            }
+            const nextLine = currentLineEl.nextElementSibling;
+            const newLine = document.createElement('div');
+            newLine.className = 'rest';
+            newLine.textContent = restText;
+            if (nextLine && nextLine.parentElement === ui.exercises) {
+                ui.exercises.insertBefore(newLine, nextLine);
+            } else {
+                ui.exercises.appendChild(newLine);
+            }
+        }
+
         ui.savedWorkouts.addEventListener('click', function(e) {
             const target = e.target;
             if (target.className === 'deleteWorkoutBtn') {
@@ -430,24 +458,8 @@
         ui.stopWorkoutBtn.addEventListener('click', stopWorkout);
         ui.saveWorkoutBtn.addEventListener('click', saveWorkout);
         ui.addRestBtn.addEventListener('click', () => {
-            const selection = window.getSelection();
-            let currentLineEl = selection.baseNode;
-            if (currentLineEl.nodeName !== '#text' && currentLineEl.textContent.trim().length === 0) {
-                currentLineEl.className = 'rest';
-                currentLineEl.textContent = 'Rest, 30';
-                return;
-            } else if (currentLineEl.nodeName === '#text') {
-                currentLineEl = currentLineEl.parentElement;
-            }
-            const nextLine = currentLineEl.nextElementSibling;
-            const newLine = document.createElement('div');
-            newLine.className = 'rest';
-            newLine.textContent = 'Rest, 30';
-            if (nextLine) {
-                ui.exercises.insertBefore(newLine, nextLine);
-            } else {
-                ui.exercises.appendChild(newLine);
-            }
+            addRest();
+            localStorage.lastWorkout = ui.exercises.innerText;
         });
 
         ui.exercises.addEventListener('keyup', () => {

@@ -1,0 +1,81 @@
+html, body {
+    margin: 0;
+    font-family: sans-serif;
+}
+#addTickerTextbox {
+    visibility: hidden;
+}
+body:hover #addTickerTextbox {
+    visibility: visible;
+}
+#stockData {
+    background: rgba(0, 0, 0, 0.5);
+    padding: 5px;
+}
+.stockContainer {
+    margin-bottom: 8px;
+    display: block;
+    position: relative;
+}
+.row {
+    display: flex;
+    justify-content: space-around;
+}
+.red {
+    filter: hue-rotate(240deg);
+}
+.symbol {
+    position: absolute;
+    left: 0;
+    font-weight: bold;
+    font-size: 36px;
+    line-height: 50px;
+    color: #0c0;
+    opacity: 0.4;
+}
+.graph {
+    flex: 1 1 auto;
+}
+.graph svg {
+    width: 100%;
+    height: 50px;
+}
+.percent {
+    position: absolute;
+    right: 0;
+    font-weight: bold;
+    font-size: 36px;
+    line-height: 50px;
+    color: #0c0;
+    opacity: 0.4;
+}
+.dayPercentDiff {
+    width: 18px;
+    height: 6px;
+    border-radius: 4px;
+}
+.veryGood {
+    background: #0c0;
+}
+.good {
+    background: #afa;
+}
+.flat {
+    background: #ccc;
+}
+.bad {
+    background: #faa;
+}
+.veryBad {
+    background: #f00;
+}
+.removeBtn {
+    position: absolute;
+    top: 0;
+    right: 0;
+    color: #f00;
+    display: none;
+}
+.stockContainer:hover .removeBtn {
+    display: block;
+}

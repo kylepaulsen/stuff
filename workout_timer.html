@@ -419,7 +419,7 @@
 
         function addRest() {
             const selection = window.getSelection();
-            let currentLineEl = selection.baseNode;
+            let currentLineEl = selection.baseNode || {};
             const restText = 'Rest, ' + getNumber(ui.secondsInput.value, 10);
             if (currentLineEl.nodeName !== '#text' && currentLineEl.textContent.trim().length === 0) {
                 currentLineEl.className = 'rest';

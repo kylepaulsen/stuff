@@ -89,6 +89,11 @@
         text-align: center;
         flex: 0 0 10%;
     }
+    .addRestRow {
+        display: flex;
+        justify-content: space-between;
+        max-width: 500px;
+    }
     .btn {
         min-width: 120px;
         height: 50px;
@@ -121,7 +126,10 @@
     <div id='workoutName'>7 Minute Workout</div>
     <div>Exercise, Seconds</div>
     <div id='exercises' contenteditable="true"></div>
-    <div><button id='addRestBtn'>Add Rest</button> <input id="secondsInput" type="number" min="0" value="10"></div>
+    <div class="addRestRow">
+        <div><button id='addRestBtn'>Add Rest</button> <input id="secondsInput" type="number" min="0" value="10"></div>
+        <div>Duration: <span id="duration"></span></div>
+    </div>
     <button id='saveWorkoutBtn' class='btn'>Save Workout</button>
     <button id='startWorkoutBtn' class='btn'>Start Workout</button>
     <div class="voice">Voice: <select id='voiceSelect'></select></div>
@@ -257,15 +265,18 @@
 
         function setExercises(exercises) {
             ui.exercises.innerHTML = '';
+            let numSeconds = 0;
             exercises.forEach(e => {
                 const div = document.createElement('div');
                 div.classList.add('exercise');
                 div.textContent = `${e.name}, ${e.seconds}`;
+                numSeconds += e.seconds;
                 if (e.name.toLowerCase() === 'rest') {
                     div.classList.add('rest');
                 }
                 ui.exercises.appendChild(div);
-            })
+            });
+            updateDuration(numSeconds);
         }
 
         function parseExercises(str) {
@@ -421,7 +432,9 @@
             const selection = window.getSelection();
             let currentLineEl = selection.baseNode || {};
             const restText = 'Rest, ' + getNumber(ui.secondsInput.value, 10);
-            if (currentLineEl.nodeName !== '#text' && currentLineEl.textContent.trim().length === 0) {
+            if (currentLineEl.nodeName !== '#text' && currentLineEl.textContent !== undefined &&
+                currentLineEl.textContent.trim().length === 0) {
+
                 currentLineEl.className = 'rest';
                 currentLineEl.textContent = restText;
                 return;
@@ -437,6 +450,31 @@
             } else {
                 ui.exercises.appendChild(newLine);
             }
+            makeTextRich();
+        }
+
+        function makeTextRich() {
+            let numSeconds = 0;
+            for (let n of ui.exercises.children) {
+                const textContent = n.textContent.toLowerCase();
+                const textContentParts = textContent.split(',');
+                if (textContent.includes('rest')) {
+                    n.className = 'rest';
+                } else {
+                    n.className = 'exercise';
+                }
+                numSeconds += parseInt(textContentParts[1] || 0);
+            }
+            updateDuration(numSeconds);
+        }
+
+        function updateDuration(numSeconds) {
+            const min = Math.floor(numSeconds / 60);
+            let sec = (numSeconds - min * 60) + '';
+            if (sec.length === 1) {
+                sec = '0' + sec;
+            }
+            ui.duration.textContent = `${min}:${sec}`;
         }
 
         ui.savedWorkouts.addEventListener('click', function(e) {
@@ -476,13 +514,7 @@
             }
         });
         ui.exercises.addEventListener('keyup', debounce(() => {
-            for (let n of ui.exercises.children) {
-                if (n.textContent.toLowerCase().includes('rest')) {
-                    n.className = 'rest';
-                } else {
-                    n.className = 'exercise';
-                }
-            }
+            makeTextRich();
             localStorage.lastWorkout = ui.exercises.innerText;
         }, 100));
 

@@ -55,7 +55,12 @@
     //     }
     // });
 
-    const getJson = (url) => fetch(url).then(d => d.json()).catch(e => {console.error(e, e.trace); return null;});
+    const getJson = (url) => fetch(url, {
+        headers: {'x-wannadance': ''}
+    }).then(d => d.json()).catch(e => {
+        console.error(e, e.trace);
+        return null;
+    });
 
     async function getHistoricStockData(symbol, startDate, endDate) {
         if (endDate === undefined) {

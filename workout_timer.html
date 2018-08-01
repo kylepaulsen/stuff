@@ -62,6 +62,12 @@
             font-size: 26px;
         }
     }
+    #startWorkoutBtn {
+        width: 100%;
+        max-width: 500px;
+        font-weight: bold;
+        margin: 40px 0 24px 0;
+    }
     #stopWorkoutBtn {
         margin-top: 0;
     }
@@ -128,9 +134,9 @@
     <div id='exercises' contenteditable="true"></div>
     <div class="addRestRow">
         <div><button id='addRestBtn'>Add Rest</button> <input id="secondsInput" type="number" min="0" value="10"></div>
+        <button id='saveWorkoutBtn'>Save Workout</button>
         <div>Duration: <span id="duration"></span></div>
     </div>
-    <button id='saveWorkoutBtn' class='btn'>Save Workout</button>
     <button id='startWorkoutBtn' class='btn'>Start Workout</button>
     <div class="voice">Voice: <select id='voiceSelect'></select></div>
     <h2>Saved Workouts</h2>
@@ -170,7 +176,7 @@
             if (voices.length === 0) {
                 voices = speechSynthesis.getVoices();
                 if (voices.length > 0) {
-                    voices.forEach(function(v, i) {
+                    voices.forEach(function(v) {
                         const opt = document.createElement('option');
                         const name = `${v.name} (${v.lang})`;
                         opt.innerHTML = name;
@@ -195,8 +201,8 @@
             };
         }
 
-        function getNumber(str, defaultNum) {
-            let num = parseInt(str);
+        function safeParseInt(str = '', defaultNum) {
+            let num = parseInt(str.trim());
             if (isNaN(num)) {
                 return defaultNum;
             }
@@ -282,12 +288,12 @@
         function parseExercises(str) {
             const exercises = [];
             if (!str) {
-                str =  ui.exercises.innerText;
+                str = ui.exercises.innerText;
             }
             str.trim().split('\n').forEach(e => {
                 const eParts = e.split(',');
                 const last = eParts.pop();
-                const seconds = Math.max(getNumber(last.trim(), 30), 0);
+                const seconds = Math.max(safeParseInt(last.trim(), 30), 0);
                 const name = eParts.join(',');
                 if (name) {
                     exercises.push({
@@ -302,18 +308,22 @@
         function saveWorkout() {
             const exercises = parseExercises();
             const name = prompt('Enter name for workout');
+            if (name === '') {
+                alert('Must enter name to save');
+            }
             if (exercises.length && name) {
                 allSavedWorkouts.push({
                     name,
                     exercises
-                })
+                });
+
+                const defaultWorkout = allSavedWorkouts.shift();
+                localStorage.savedWorkouts = JSON.stringify(allSavedWorkouts);
+                allSavedWorkouts.unshift(defaultWorkout);
+                populateSavedWorkouts();
+                ui.workoutName.textContent = name;
+                localStorage.lastWorkoutName = name;
             }
-            const defaultWorkout = allSavedWorkouts.shift();
-            localStorage.savedWorkouts = JSON.stringify(allSavedWorkouts);
-            allSavedWorkouts.unshift(defaultWorkout);
-            populateSavedWorkouts();
-            ui.workoutName.textContent = name;
-            localStorage.lastWorkoutName = name;
         }
 
         let lastMsg;
@@ -365,7 +375,11 @@
                         say('Workout complete!');
                         stopWorkout();
                     } else if (nextIsRest) {
-                        say(`Now rest! Up next, ${exercises[currentExerciseIdx + 2].name}`);
+                        let toSay = 'Now rest!';
+                        if (exercises[currentExerciseIdx + 2]) {
+                            toSay += ` Up next, ${exercises[currentExerciseIdx + 2].name}`;
+                        }
+                        say(toSay);
                     } else {
                         say('Go!');
                     }
@@ -393,8 +407,9 @@
             currentExerciseIdx++;
             const currentExercise = exercises[currentExerciseIdx];
             let nextUp = '';
-            if (currentExercise.name.toLowerCase() === 'rest' || currentExerciseIdx === 0) {
-                nextUp = ` (Next up: ${exercises[currentExerciseIdx + 1].name})`;
+            const nextExercise = exercises[currentExerciseIdx + 1];
+            if (nextExercise && (currentExercise.name.toLowerCase() === 'rest' || currentExerciseIdx === 0)) {
+                nextUp = ` (Next up: ${nextExercise.name})`;
             }
             if (currentExercise) {
                 timerTimestamp = Date.now();
@@ -431,7 +446,7 @@
         function addRest() {
             const selection = window.getSelection();
             let currentLineEl = selection.baseNode || {};
-            const restText = 'Rest, ' + getNumber(ui.secondsInput.value, 10);
+            const restText = 'Rest, ' + safeParseInt(ui.secondsInput.value, 10);
             if (currentLineEl.nodeName !== '#text' && currentLineEl.textContent !== undefined &&
                 currentLineEl.textContent.trim().length === 0) {
 
@@ -463,7 +478,7 @@
                 } else {
                     n.className = 'exercise';
                 }
-                numSeconds += parseInt(textContentParts[1] || 0);
+                numSeconds += safeParseInt(textContentParts[1], 0);
             }
             updateDuration(numSeconds);
         }

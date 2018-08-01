@@ -1,5 +1,6 @@
 {
-    const corsProxy = 'https://cors-anywhere.herokuapp.com/';
+    //const corsProxy = 'https://cors-anywhere.herokuapp.com/';
+    const corsProxy = 'https://pleasefetch.herokuapp.com/';
     const get = function(object, path, defaultVal = undefined) {
         const pathParts = path.replace(/\]/g, '').split(/\.|\[/);
         let current = object;
@@ -16,43 +17,45 @@
         return current;
     };
 
-    const cooldownTime = 1000;
-    const cooldownQueue = [];
-    let lastRequest = 0;
-    let requestInProgress = false;
-    const getJson = (url) => new Promise((res) => {
-        cooldownQueue.push({url, res});
+    // const cooldownTime = 1000;
+    // const cooldownQueue = [];
+    // let lastRequest = 0;
+    // let requestInProgress = false;
+    // const getJson = (url) => new Promise((res) => {
+    //     cooldownQueue.push({url, res});
 
-        const next = () => {
-            const timeToWait = Math.max(cooldownTime - (Date.now() - lastRequest), 0);
-            requestInProgress = true;
-            setTimeout(() => {
-                const {url, res} = (cooldownQueue.shift() || {});
-                if (url) {
-                    lastRequest = Date.now();
-                    console.log('fetching url: ', url);
-                    fetch(url).then(d => d.json()).then(data => {
-                        res(data);
-                        requestInProgress = false;
-                        if (cooldownQueue.length) {
-                            next();
-                        }
-                    }).catch(e => {
-                        console.error(e, e.trace);
-                        res(null);
-                        requestInProgress = false;
-                        if (cooldownQueue.length) {
-                            next();
-                        }
-                    });
-                }
-            }, timeToWait);
-        };
+    //     const next = () => {
+    //         const timeToWait = Math.max(cooldownTime - (Date.now() - lastRequest), 0);
+    //         requestInProgress = true;
+    //         setTimeout(() => {
+    //             const {url, res} = (cooldownQueue.shift() || {});
+    //             if (url) {
+    //                 lastRequest = Date.now();
+    //                 console.log('fetching url: ', url);
+    //                 fetch(url).then(d => d.json()).then(data => {
+    //                     res(data);
+    //                     requestInProgress = false;
+    //                     if (cooldownQueue.length) {
+    //                         next();
+    //                     }
+    //                 }).catch(e => {
+    //                     console.error(e, e.trace);
+    //                     res(null);
+    //                     requestInProgress = false;
+    //                     if (cooldownQueue.length) {
+    //                         next();
+    //                     }
+    //                 });
+    //             }
+    //         }, timeToWait);
+    //     };
 
-        if (!requestInProgress && cooldownQueue.length === 1) {
-            next();
-        }
-    });
+    //     if (!requestInProgress && cooldownQueue.length === 1) {
+    //         next();
+    //     }
+    // });
+
+    const getJson = (url) => fetch(url).then(d => d.json()).catch(e => {console.error(e, e.trace); return null;});
 
     async function getHistoricStockData(symbol, startDate, endDate) {
         if (endDate === undefined) {

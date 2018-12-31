@@ -155,23 +155,6 @@ var serverlessWebRTC = (function() {
     };
     // var iceServers = null;
 
-    var optionalConfig = {
-        optional: [{
-            DtlsSrtpKeyAgreement: true
-        }]
-    };
-    //var optionalConfig = null;
-
-    // not needed?
-    /*
-    var mediaConstraints = {
-        optional: [],
-        mandatory: {
-            OfferToReceiveAudio: false,
-            OfferToReceiveVideo: false
-        }
-    };
-    */
     var givenIds = {};
 
     function makePeerId() {
@@ -187,7 +170,7 @@ var serverlessWebRTC = (function() {
         offerCallback = offerCallback || function() {};
         dataChannelCallback = dataChannelCallback || function() {};
 
-        var peerCon = new RTCPeerConnection(iceServers, optionalConfig);
+        var peerCon = new RTCPeerConnection(iceServers);
 
         var peerConDataChannel = peerCon.createDataChannel("test");
         peerConDataChannel.peerId = makePeerId();

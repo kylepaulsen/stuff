@@ -166,6 +166,7 @@ var serverlessWebRTC = (function() {
         return id;
     }
 
+    var iceTimeoutTimelimit = 1000;
     function makeOffer(offerCallback, dataChannelCallback) {
         offerCallback = offerCallback || function() {};
         dataChannelCallback = dataChannelCallback || function() {};
@@ -175,11 +176,22 @@ var serverlessWebRTC = (function() {
         var peerConDataChannel = peerCon.createDataChannel("test");
         peerConDataChannel.peerId = makePeerId();
 
+        var calledOfferCallback = false;
+        var callOfferCallback = function() {
+            if (!calledOfferCallback) {
+                calledOfferCallback = true;
+                offerCallback(JSON.stringify(peerCon.localDescription));
+            }
+        };
+
+        var iceTimeout;
         peerCon.onicecandidate = function(e) {
             console.log("onicecandidate...", e.candidate && e.candidate.candidate);
             if (e.candidate === null) {
-                offerCallback(JSON.stringify(peerCon.localDescription));
+                callOfferCallback();
             }
+            clearTimeout(iceTimeout);
+            iceTimeout = setTimeout(callOfferCallback, iceTimeoutTimelimit);
         };
 
         peerCon.createOffer(function(description) {
@@ -208,15 +220,26 @@ var serverlessWebRTC = (function() {
         answerCallback = answerCallback || function() {};
         dataChannelCallback = dataChannelCallback || function() {};
 
-        var peerCon = new RTCPeerConnection(iceServers, optionalConfig);
+        var peerCon = new RTCPeerConnection(iceServers);
 
         var peerConDataChannel;
 
+        var calledAnswerCallback = false;
+        var callAnswerCallback = function() {
+            if (!calledAnswerCallback) {
+                calledAnswerCallback = true;
+                answerCallback(JSON.stringify(peerCon.localDescription));
+            }
+        };
+
+        var iceTimeout;
         peerCon.onicecandidate = function (e) {
             console.log("onicecandidate...", e.candidate && e.candidate.candidate);
             if (e.candidate === null) {
-                answerCallback(JSON.stringify(peerCon.localDescription));
+                callAnswerCallback();
             }
+            clearTimeout(iceTimeout);
+            iceTimeout = setTimeout(callAnswerCallback, iceTimeoutTimelimit);
         };
 
         var offerDesc = new RTCSessionDescription(JSON.parse(offer));

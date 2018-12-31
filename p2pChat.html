@@ -176,7 +176,7 @@ var serverlessWebRTC = (function() {
         peerConDataChannel.peerId = makePeerId();
 
         peerCon.onicecandidate = function(e) {
-            console.log("onicecandidate...");
+            console.log("onicecandidate...", e.candidate && e.candidate.candidate);
             if (e.candidate === null) {
                 offerCallback(JSON.stringify(peerCon.localDescription));
             }
@@ -213,7 +213,7 @@ var serverlessWebRTC = (function() {
         var peerConDataChannel;
 
         peerCon.onicecandidate = function (e) {
-            console.log("onicecandidate...");
+            console.log("onicecandidate...", e.candidate && e.candidate.candidate);
             if (e.candidate === null) {
                 answerCallback(JSON.stringify(peerCon.localDescription));
             }

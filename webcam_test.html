@@ -46,12 +46,7 @@ video {
 
     var numWidthWise = 6;
 
-    navigator.getMedia = (navigator.getUserMedia ||
-                       navigator.webkitGetUserMedia ||
-                       navigator.mozGetUserMedia ||
-                       navigator.msGetUserMedia);
-
-    if (!navigator.getMedia) {
+    if (!navigator.mediaDevices || !navigator.mediaDevices.getUserMedia) {
         alert('Needs better browser. Try Chrome.');
         return;
     }
@@ -64,8 +59,8 @@ video {
             cb({width: vidEl.videoWidth, height: vidEl.videoHeight});
         };
         vidEl.addEventListener('playing', getRes, false);
-        navigator.getMedia({video: true, audio: false}, function(stream) {
-            vidEl.src = window.URL.createObjectURL(stream);
+        navigator.mediaDevices.getUserMedia({video: true, audio: false}).then(function(stream) {
+            vidEl.srcObject = stream;
         }, function(err) {
             console.log('The following error occured: ' + err);
         });
@@ -103,11 +98,10 @@ video {
         var videoDiv = $('#videos')[0];
         videoDiv.innerHTML = videoHTML;
 
-        navigator.getMedia({video: true, audio: false}, function(stream) {
+        navigator.mediaDevices.getUserMedia({video: true, audio: false}).then(function(stream) {
             var videos = $('video');
-            var streamUrl = window.URL.createObjectURL(stream);
             for (var t = 0; t < videos.length; ++t) {
-                videos[t].src = streamUrl;
+                videos[t].srcObject = stream;
             }
         }, function(err) {
             console.log('The following error occured: ' + err);

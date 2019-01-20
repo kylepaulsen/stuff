@@ -1,0 +1,18 @@
+<html>
+    <body>
+        <h1>Peer 2 Peer Mesh Chat</h1>
+        <div id="connectForm">
+            Room: <input id="roomInput" placeholder="chat room to enter" value="default" /><br>
+            Name: <input id="nameInput" placeholder="a name others will see" value="anon" /><br>
+            <button id="joinBtn">Join</button>
+        </div>
+        <div id="chatBox" style="width: 800px; display: none;">
+            <div id="chat" style="width: 100%; height: 600px; border: 1px solid #000; overflow-y: auto;"></div>
+            <input id="chatInput" style="width: calc(100% - 110px)" placeholder="type something and press enter" /> <button id="sendBtn" style="width: 100px;">Send</button>
+        </div>
+        <script src="simplepeer.min.js"></script>
+        <script src="wsSignaling.js"></script>
+        <script src="peerMesh.js"></script>
+        <script src="index.js"></script>
+    </body>
+</html>

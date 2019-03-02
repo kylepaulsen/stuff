@@ -1,0 +1,237 @@
+<html>
+    <head>
+        <title>Pitch Hearing Test</title>
+        <style>
+            * {
+                font-family: sans-serif;
+            }
+            input[type=range] {
+                width: 100%;
+            }
+            button {
+                padding: 20px;
+                font-size: 24px;
+                cursor: pointer;
+            }
+            .screen {
+                display: none;
+                flex-direction: column;
+                justify-content: center;
+                align-items: center;
+                width: 100%;
+                height: 100%;
+            }
+            .screen > div {
+                width: 100%;
+                text-align: center;
+            }
+            .testResults {
+                display: none;
+                text-align: center;
+            }
+            .warning {
+                max-width: 500px;
+                margin: 0 0 24px 0;
+                text-align: center;
+            }
+        </style>
+    </head>
+    <body>
+        <div data-id="titleScreen" class="screen">
+            <h1>Pitch Hearing Test</h1>
+            <p>Take one of the tests to see how well you can detect pitch</p>
+            <p class="warning">
+                WARNING: Please set your volume very low, start a test, and then adjust volume higher as needed. Headphones recommended.
+            </p>
+            <div>
+                <button data-id="matchTestBtn">Match Pitch Test</button>
+                <button data-id="nextPitchTestBtn">Find Next Pitch Test</button>
+            </div>
+            <div data-id="testResults" class="testResults" style="display: none">
+                <h3>Last Test Results</h3>
+                <p>You were within <span data-id="result"></span> hertz of the answers on average.</p>
+            </div>
+        </div>
+        <div data-id="matchScreen" class="screen">
+            <h1>Try to match this pitch (<span data-id="testNum"></span>/10)</h1>
+            <p>You wont be able to preview it again after you click below.</p>
+            <button data-id="readyToMatchBtn">Click When Ready</button>
+        </div>
+        <div data-id="enterPitchScreen" class="screen">
+            <h1 data-id="matchPitchTitle">Match the Pitch!</h1>
+            <div data-id="findPitchInfo">
+                <h1>Find the next pitch (<span data-id="testNum2"></span>/10)</h1>
+                <p>Listen to the series of tones and select the pitch that comes next.</p>
+                <button data-id="playTonesBtn">Play Tones</button>
+            </div>
+            <p>Drag the slider to select a pitch.</p>
+            <div data-id="enterPitchStep1">
+                <p>You will be able to fine tune your selection when you click next.</p>
+                <input type="range" data-id="freq1" min="0" max="2000" step="any" value="0" />
+                <button data-id="enterPitchNextBtn">Next</button>
+            </div>
+            <div data-id="enterPitchStep2">
+                <input type="range" data-id="freq2" min="0" max="2000" step="any" value="0" />
+                <div>
+                    <button data-id="pitchBackBtn">Back</button>
+                    <button data-id="selectPitchBtn">Select Pitch</button>
+                </div>
+            </div>
+        </div>
+        <script>
+            {
+                const ui = {};
+                {
+                    const els = document.querySelectorAll("[data-id]");
+                    for (let el of els) {
+                        ui[el.dataset.id] = el;
+                    }
+                }
+
+                const minFreq = 200;
+                const maxFreq = 2000;
+
+                let osc;
+                const setupAudio = () => {
+                    if (osc) {
+                        return;
+                    }
+                    const actx = new AudioContext();
+                    osc = actx.createOscillator();
+                    osc.connect(actx.destination);
+                    osc.type = 'sine';
+                    osc.frequency.value = 0;
+                    osc.start();
+                };
+
+                const root12of2 = 2 ** (1 / 12);
+
+                let resolveAnswer;
+                const getAnswer = () => new Promise(res => {
+                    resolveAnswer = res;
+                });
+
+                const showScreen = screen => {
+                    const screens = document.querySelectorAll('.screen');
+                    for (let screen of screens) {
+                        screen.style.display = 'none';
+                    }
+                    ui[screen].style.display = 'flex';
+                };
+                showScreen('titleScreen');
+
+                const sleep = (ms) => new Promise(res => setTimeout(res, ms));
+
+                const playToneSeries = async (startFreq) => {
+                    ui.freq1.disabled = true;
+                    ui.freq2.disabled = true;
+                    ui.playTonesBtn.disabled = true;
+                    const lastFreq = osc.frequency.value;
+                    osc.frequency.setValueAtTime(0, 0);
+                    await sleep(500);
+                    osc.frequency.setValueAtTime(startFreq, 0);
+                    await sleep(750);
+                    osc.frequency.setValueAtTime(startFreq * root12of2, 0);
+                    await sleep(750);
+                    osc.frequency.setValueAtTime(startFreq * (root12of2 ** 2), 0);
+                    await sleep(750);
+                    osc.frequency.setValueAtTime(lastFreq, 0);
+                    ui.playTonesBtn.disabled = false;
+                    ui.freq1.disabled = false;
+                    ui.freq2.disabled = false;
+                };
+
+                ui.freq1.addEventListener('input', () => {
+                    osc.frequency.setValueAtTime(ui.freq1.value, 0);
+                });
+
+                ui.freq2.addEventListener('input', () => {
+                    osc.frequency.setValueAtTime(ui.freq2.value, 0);
+                });
+
+                ui.matchTestBtn.addEventListener('click', async () => {
+                    setupAudio();
+                    ui.findPitchInfo.style.display = 'none';
+                    ui.matchPitchTitle.style.display = 'block';
+                    const tests = []
+                    while (tests.length < 10) {
+                        showScreen('matchScreen');
+                        ui.testNum.textContent = tests.length + 1;
+                        const answer = Math.random() * (maxFreq - minFreq) + minFreq;
+                        osc.frequency.setValueAtTime(answer, 0);
+                        const guess = await getAnswer();
+                        tests.push({ answer, guess, diff: Math.abs(answer - guess) });
+                    }
+                    osc.frequency.setValueAtTime(0, 0);
+                    showScreen("titleScreen");
+                    ui.testResults.style.display = 'block';
+                    ui.result.textContent = (tests.reduce((t, n) => t + n.diff, 0) / tests.length).toFixed(3);
+                    console.log(tests);
+                });
+
+                ui.readyToMatchBtn.addEventListener('click', () => {
+                    showScreen('enterPitchScreen');
+                    ui.enterPitchStep1.style.display = 'block';
+                    ui.enterPitchStep2.style.display = 'none';
+                    osc.frequency.setValueAtTime(0, 0);
+                    ui.freq1.value = 0;
+                });
+
+                ui.enterPitchNextBtn.addEventListener('click', () => {
+                    ui.enterPitchStep2.style.display = 'block';
+                    ui.enterPitchStep1.style.display = 'none';
+                    ui.selectPitchBtn.disabled = true;
+                    setTimeout(() => {
+                        ui.selectPitchBtn.disabled = false;
+                    }, 500);
+                    const realFreq = Math.max(ui.freq1.value, minFreq);
+                    ui.freq2.min = Math.max(realFreq * (root12of2 ** -3), minFreq);
+                    ui.freq2.max = Math.min(realFreq * (root12of2 ** 3), maxFreq);
+                    ui.freq2.value = realFreq;
+                });
+
+                ui.pitchBackBtn.addEventListener('click', () => {
+                    ui.enterPitchStep1.style.display = 'block';
+                    ui.enterPitchStep2.style.display = 'none';
+                    ui.freq1.value = ui.freq2.value;
+                });
+
+                ui.selectPitchBtn.addEventListener('click', () => {
+                    resolveAnswer(ui.freq2.value);
+                });
+
+                ui.nextPitchTestBtn.addEventListener('click', async () => {
+                    setupAudio();
+                    ui.findPitchInfo.style.display = 'block';
+                    ui.matchPitchTitle.style.display = 'none';
+                    showScreen('enterPitchScreen');
+
+                    const maxStartFreq = maxFreq / (2 ** 0.25);
+                    const tests = []
+                    while (tests.length < 10) {
+                        osc.frequency.value = 0;
+                        ui.freq1.value = 0;
+                        ui.enterPitchStep1.style.display = 'block';
+                        ui.enterPitchStep2.style.display = 'none';
+                        ui.testNum2.textContent = tests.length + 1;
+                        const startFreq = Math.random() * (maxStartFreq - minFreq) + minFreq;
+                        const answer = startFreq * (root12of2 ** 3);
+                        ui.playTonesBtn.dataset.freq = startFreq;
+                        playToneSeries(startFreq);
+                        const guess = await getAnswer();
+                        tests.push({ answer, guess, diff: Math.abs(answer - guess) });
+                    }
+                    osc.frequency.setValueAtTime(0, 0);
+                    showScreen("titleScreen");
+                    ui.testResults.style.display = 'block';
+                    ui.result.textContent = (tests.reduce((t, n) => t + n.diff, 0) / tests.length).toFixed(3);
+                    console.log(tests);
+                });
+
+                ui.playTonesBtn.addEventListener('click', () => {
+                    playToneSeries(ui.playTonesBtn.dataset.freq);
+                });
+            }
+        </script>
+    </body>
+</html>

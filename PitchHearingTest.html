@@ -13,6 +13,13 @@
                 font-size: 24px;
                 cursor: pointer;
             }
+            th {
+                background: #ddd;
+                padding: 4px 12px;
+            }
+            td {
+                padding: 4px 12px;
+            }
             .screen {
                 display: none;
                 flex-direction: column;
@@ -27,7 +34,8 @@
             }
             .testResults {
                 display: none;
-                text-align: center;
+                flex-direction: column;
+                align-items: center;
             }
             .warning {
                 max-width: 500px;
@@ -49,7 +57,8 @@
             </div>
             <div data-id="testResults" class="testResults" style="display: none">
                 <h3>Last Test Results</h3>
-                <p>You were within <span data-id="result"></span> hertz of the answers on average.</p>
+                <p>You were within <span data-id="result"></span> <a href="https://en.wikipedia.org/wiki/Cent_(music)">cents</a> of the answers on average.</p>
+                <table data-id="resultTable"></table>
             </div>
         </div>
         <div data-id="matchScreen" class="screen">
@@ -111,6 +120,8 @@
                     resolveAnswer = res;
                 });
 
+                const getCentsDiff = (f1, f2) => Math.abs(1200 * Math.log2(f1 / f2));
+
                 const showScreen = screen => {
                     const screens = document.querySelectorAll('.screen');
                     for (let screen of screens) {
@@ -141,6 +152,14 @@
                     ui.freq2.disabled = false;
                 };
 
+                const makeResultsTable = tests => {
+                    let html = '<tr><th>Answer (Hz)</th><th>Guess (Hz)</th><th>Cent Difference</th></tr>';
+                    tests.forEach(test => {
+                        html += `<tr><td>${test.answer}</td><td>${test.guess}</td><td>${test.diff}</td></tr>`;
+                    });
+                    ui.resultTable.innerHTML = html;
+                };
+
                 ui.freq1.addEventListener('input', () => {
                     osc.frequency.setValueAtTime(ui.freq1.value, 0);
                 });
@@ -160,12 +179,13 @@
                         const answer = Math.random() * (maxFreq - minFreq) + minFreq;
                         osc.frequency.setValueAtTime(answer, 0);
                         const guess = await getAnswer();
-                        tests.push({ answer, guess, diff: Math.abs(answer - guess) });
+                        tests.push({ answer, guess, diff: getCentsDiff(answer, guess) });
                     }
                     osc.frequency.setValueAtTime(0, 0);
                     showScreen("titleScreen");
-                    ui.testResults.style.display = 'block';
+                    ui.testResults.style.display = 'flex';
                     ui.result.textContent = (tests.reduce((t, n) => t + n.diff, 0) / tests.length).toFixed(3);
+                    makeResultsTable(tests);
                     console.log(tests);
                 });
 
@@ -219,12 +239,13 @@
                         ui.playTonesBtn.dataset.freq = startFreq;
                         playToneSeries(startFreq);
                         const guess = await getAnswer();
-                        tests.push({ answer, guess, diff: Math.abs(answer - guess) });
+                        tests.push({ answer, guess, diff: getCentsDiff(answer, guess) });
                     }
                     osc.frequency.setValueAtTime(0, 0);
                     showScreen("titleScreen");
-                    ui.testResults.style.display = 'block';
+                    ui.testResults.style.display = 'flex';
                     ui.result.textContent = (tests.reduce((t, n) => t + n.diff, 0) / tests.length).toFixed(3);
+                    makeResultsTable(tests);
                     console.log(tests);
                 });
 

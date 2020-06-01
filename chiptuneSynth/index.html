@@ -1,0 +1,58 @@
+<html>
+    <head>
+        <title>Chiptune Synth</title>
+        <style>
+            * {
+                font-family: sans-serif;
+            }
+            button {
+                cursor: pointer;
+            }
+            .flex {
+                display: flex;
+            }
+            .vflex {
+                display: flex;
+                flex-direction: column;
+            }
+            .pad > *:not(:first-child) {
+                margin-left: 20px;
+            }
+            .vpad > *:not(:first-child) {
+                margin-top: 20px;
+            }
+        </style>
+    </head>
+    <body>
+        <div style="margin-bottom: 20px;">
+            <h1>Chiptune Synth</h1>
+            <div>Use your keyboard to play notes.<br>You can also hook up a midi controller (just make sure to click the page first).</div>
+        </div>
+        <div class="flex pad">
+            <div>
+                <div>Volume:</div>
+                <input data-ui="volumeInput" type="range" max="1" min="0" step="any">
+            </div>
+            <div>
+                <div>Instrument:</div>
+                <select data-ui="instrumentSelect"></select>
+            </div>
+            <div>
+                <div>Octave:</div>
+                <div>
+                    <button data-ui="downOctaveBtn">&lt;</button>
+                    <span data-ui="octaveSpan"></span>
+                    <button data-ui="upOctaveBtn">&gt;</button>
+                </div>
+            </div>
+        </div>
+        <div data-ui="currentNotes" style="margin-top: 10px;"></div>
+
+        <script src="lib/Tone_14.7.3.min.js"></script>
+        <script src="lib/webmidi_2.5.1.min.js"></script>
+
+        <script src="keyboardKeys.js"></script>
+        <script src="instruments.js"></script>
+        <script src="main.js"></script>
+    </body>
+</html>

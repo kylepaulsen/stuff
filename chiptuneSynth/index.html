@@ -26,27 +26,33 @@
     <body>
         <div style="margin-bottom: 20px;">
             <h1>Chiptune Synth</h1>
-            <div>Use your keyboard to play notes.<br>You can also hook up a midi controller (just make sure to click the page first).</div>
+            <div>Use your keyboard to play notes.<br>You can also hook up a midi controller.</div>
         </div>
-        <div class="flex pad">
+        <div class="vpad">
             <div>
-                <div>Volume:</div>
-                <input data-ui="volumeInput" type="range" max="1" min="0" step="any">
+                <div>Midi Device:</div>
+                <select data-ui="midiDeviceSelect"><option>None</option></select>
             </div>
-            <div>
-                <div>Instrument:</div>
-                <select data-ui="instrumentSelect"></select>
-            </div>
-            <div>
-                <div>Octave:</div>
+            <div class="flex pad">
                 <div>
-                    <button data-ui="downOctaveBtn">&lt;</button>
-                    <span data-ui="octaveSpan"></span>
-                    <button data-ui="upOctaveBtn">&gt;</button>
+                    <div>Volume:</div>
+                    <input data-ui="volumeInput" type="range" max="1" min="0" step="any">
+                </div>
+                <div>
+                    <div>Instrument:</div>
+                    <select data-ui="instrumentSelect"></select>
+                </div>
+                <div>
+                    <div>Octave:</div>
+                    <div>
+                        <button data-ui="downOctaveBtn">&lt;</button>
+                        <span data-ui="octaveSpan"></span>
+                        <button data-ui="upOctaveBtn">&gt;</button>
+                    </div>
                 </div>
             </div>
+            <div data-ui="currentNotes" style="margin-top: 10px;"></div>
         </div>
-        <div data-ui="currentNotes" style="margin-top: 10px;"></div>
 
         <script src="lib/Tone_14.7.3.min.js"></script>
         <script src="lib/webmidi_2.5.1.min.js"></script>

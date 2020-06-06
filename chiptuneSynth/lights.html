@@ -1,0 +1,191 @@
+<html>
+    <head>
+        <title>Lights</title>
+        <style>
+            * {
+                font-family: sans-serif;
+            }
+            button {
+                cursor: pointer;
+            }
+            .flex {
+                display: flex;
+            }
+            .vflex {
+                display: flex;
+                flex-direction: column;
+            }
+            .pad > *:not(:first-child) {
+                margin-left: 20px;
+            }
+            .vpad > *:not(:first-child) {
+                margin-top: 20px;
+            }
+        </style>
+    </head>
+    <body>
+        <button id="reset">Reset Command Mode</button>
+        <button id="normal">Normal Mode</button>
+        <script src="lib/webmidi_2.5.1.min.js"></script>
+
+        <script>
+            const debounce = (fn, ms) => {
+                let timeout;
+                return () => {
+                    clearTimeout(timeout);
+                    timeout = setTimeout(fn, ms);
+                };
+            };
+
+            const removeAllListeners = () => {
+                WebMidi.inputs.forEach(input => {
+                    input.removeListener('noteon');
+                    input.removeListener('noteoff');
+                    input.removeListener('pitchbend');
+                    input.removeListener('midimessage');
+                });
+            };
+
+            let output;
+
+            document.querySelector('#reset').addEventListener('click', () => {
+                output.send(159, [12, 0]);
+                output.send(159, [12, 127]);
+            });
+
+            document.querySelector('#normal').addEventListener('click', () => {
+                output.send(159, [12, 0]);
+            });
+
+            const padIds = [
+                [40, 41, 42, 43, 48, 49, 50, 51],
+                [36, 37, 38, 39, 44, 45, 46, 47]
+            ];
+
+            const startWave = padId => {
+                let y = 0;
+                let x = padIds[y].indexOf(padId);
+                if (x === -1) {
+                    y = 1;
+                    x = padIds[y].indexOf(padId);
+                }
+                if (x === -1) {
+                    return;
+                }
+                let data = [[], []];
+
+                data[y][x] = 1;
+
+                const set = (x, y, newData) => {
+                    if (x < 0 || x > 7 || y < 0 || y > 1 || data[y][x] === 0) {
+                        return;
+                    }
+                    newData[y][x] = 1;
+                };
+
+                const color = Math.floor(Math.random() * 127) + 1;
+
+                const paintAndStep = () => {
+                    for (let y = 0; y < 2; y++) {
+                        for (let x = 0; x < 8; x++) {
+                            const d = data[y][x];
+                            if (d !== undefined) {
+                                const c = d === 1 ? color : 0;
+                                output.send(153, [padIds[y][x], c]);
+                            }
+                        }
+                    }
+
+                    let changed = false;
+                    const newData = [[], []];
+                    for (let y = 0; y < 2; y++) {
+                        for (let x = 0; x < 8; x++) {
+                            if (data[y][x] === 1) {
+                                changed = true;
+                                set(x + 1, y, newData);
+                                set(x - 1, y, newData);
+                                set(x, y + 1, newData);
+                                set(x, y - 1, newData);
+                                newData[y][x] = 0;
+                            }
+                        }
+                    }
+                    data = newData;
+
+                    if (changed) {
+                        setTimeout(paintAndStep, 50);
+                    }
+                };
+                paintAndStep();
+            };
+
+            const connectionChange = debounce(() => {
+                removeAllListeners();
+
+                output = WebMidi.getOutputByName('MIDIOUT2 (Launchkey Mini MK3)');
+                const input = WebMidi.getInputByName('MIDIIN2 (Launchkey Mini MK3)');
+
+                if (!input || !output) {
+                    console.error('Couldn\'t find LaunchKey Mini MK3');
+                    return;
+                }
+
+                // activate control mode
+                output.send(159, [12, 127]);
+
+                input.addListener('midimessage', 'all', e => {
+                    const command = e.data[0] >> 4;
+                    const channel = (e.data[0] & 0xf) + 1;
+                    if (channel !== 9 && command !== 15) {
+                        console.log(`${input.name}: Chan: ${channel}, CMD: ${command} : `, e.data);
+
+                        if (command === 9 || command === 11) {
+                            // output.send(e.data[0], [e.data[1], 5]);
+                            startWave(e.data[1]);
+                        }
+                    }
+                });
+            }, 200);
+
+            WebMidi.enable(err => {
+                if (err) {
+                    // eslint-disable-next-line no-alert
+                    alert('Failed to set up midi interface.');
+                    console.error(err);
+                    return;
+                }
+
+                WebMidi.addListener('connected', connectionChange);
+                WebMidi.addListener('disconnected', connectionChange);
+            });
+
+            /*
+            WebMidi.outputs[1].send(159, [12, 127]) // control mode (C0 on chan 16)
+            WebMidi.outputs[1].send(159, [12, 0]) // normal mode (C0 on chan 16)
+
+            WebMidi.outputs[1].send(153, [36, 5]);
+            WebMidi.outputs[1].send(153, [51, 5]);
+
+            .playNote("C2", 10, { rawVelocity: true, velocity: 5 })
+            .playNote("D#3", 10, { rawVelocity: true, velocity: 5 })
+
+            // stop, solo, mute btn
+            WebMidi.outputs[1].send(176, [105, 1])
+
+            for (let x = 154; x < 192; x++) {
+                for (let y = 0; y < 128; y++) {
+                    WebMidi.outputs[1].send(x, [y, 5]);
+                }
+            }
+
+            // 179
+
+            var changeColor = x => {
+                WebMidi.outputs[1].send(176, [104, x]);
+                setTimeout(() => changeColor((x + 1) % 128), 100);
+            };
+            changeColor(0);
+            */
+        </script>
+    </body>
+</html>

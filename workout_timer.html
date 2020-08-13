@@ -76,6 +76,10 @@
     }
     #screenLockVid {
         display: none;
+        position: fixed;
+        left: 0px;
+        top: 0px;
+        opacity: 0;
     }
     .vflex {
         display: flex;
@@ -83,6 +87,9 @@
     }
     .workoutContainerTop {
         flex: 0 0 20%;
+        display: flex;
+        justify-content: center;
+        align-items: center;
     }
     .workoutContainerMiddle {
         display: flex;
@@ -93,7 +100,7 @@
     }
     .workoutContainerBottom {
         text-align: center;
-        flex: 0 0 10%;
+        flex: 0 0 15%;
     }
     .addRestRow {
         display: flex;
@@ -143,7 +150,7 @@
     <div id="savedWorkouts"></div>
     <div id='overlay'></div>
     <div id='workoutContainer'>
-        <div class='vflex'>
+        <div class='vflex' style="height: 100%;">
             <div class='workoutContainerTop'>
                 <div id='currentExerciseName'></div>
             </div>
@@ -157,8 +164,8 @@
     </div>
     <video id='screenLockVid' width='1' loop muted playsinline>
         <source
-            src='data:video/mp4;base64,AAAAGGZ0eXBtcDQyAAAAAG1wNDFpc29tAAAAJ3V1aWRcpwj7Mo5CBahhZQ7KCpWWAAAACzYuMi4wOTIwMC4wAAABVm1kYXQAAAAAAAAAEAAAAAIJEAAAADMGBS8C+GFQ/HBBcrcySPOnKj00TWljcm9zb2Z0IEguMjY0IEVuY29kZXIgVjEuNS4zAIAAAADnBgXjy7ITkphzQ9qopsdCmDVs9XNyYzozIGg6NjQgdzo2NCBmcHM6MS4wMDAgcGY6NjYgbHZsOjEgYjowIGJxcDozIGdvcDozIGlkcjozIHNsYzoxIGNtcDowIHJjOjEgcXA6MjYgcmF0ZToxMDAwMDAgcGVhazowIGJ1ZmY6Mzc1MDAgcmVmOjIgc3JjaDozMiBhc3JjaDoxIHN1YnA6MSBwYXI6NiAzIDMgcm5kOjAgY2FiYWM6MCBscDoyIGN0bnQ6MCBhdWQ6MSBsYXQ6MCB3cms6NCB2dWk6MSBseXI6MSA8PACAAAAAGmWIgEv///D0UAAQI/eK331itddddddddddeAAACrW1vb3YAAABsbXZoZAAAAADVNz8p1Tc/KQAAA+gAAAPoAAEAAAEAAAAAAAAAAAAAAAABAAAAAAAAAAAAAAAAAAAAAQAAAAAAAAAAAAAAAAAAQAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAIAAAH1dHJhawAAAFx0a2hkAAAAAdU3PynVNz8pAAAAAQAAAAAAAAPoAAAAAAAAAAAAAAAAAAAAAAABAAAAAAAAAAAAAAAAAAAAAQAAAAAAAAAAAAAAAAAAQAAAAABAAAAAQAAAAAABkW1kaWEAAAAgbWRoZAAAAADVNz8p1Tc/KQAAA+gAAAPoVcQAAAAAAC1oZGxyAAAAAAAAAAB2aWRlAAAAAAAAAAAAAAAAVmlkZW9IYW5kbGVyAAAAATxtaW5mAAAAFHZtaGQAAAABAAAAAAAAAAAAAAAkZGluZgAAABxkcmVmAAAAAAAAAAEAAAAMdXJsIAAAAAEAAAD8c3RibAAAAJRzdHNkAAAAAAAAAAEAAACEYXZjMQAAAAAAAAABAAAAAAAAAAAAAAAAAAAAAABAAEAASAAAAEgAAAAAAAAAAQpBVkMgQ29kaW5nAAAAAAAAAAAAAAAAAAAAAAAAAAAAABj//wAAAC5hdmNDAULQC//hABdnQtALlbEJoQAAAwABAAADAAINoIhG4AEABGjKjyAAAAAYc3R0cwAAAAAAAAABAAAAAQAAA+gAAAAcc3RzYwAAAAAAAAABAAAAAQAAAAEAAAABAAAAGHN0c3oAAAAAAAAAAAAAAAEAAAFGAAAAFHN0Y28AAAAAAAAAAQAAAE8AAABEdWR0YQAAADRtZXRhAAAAAAAAACBoZGxyAAAAAAAAAABtZGlyAAAAAAAAAAAAAAAAAAAACGlsc3QAAAAIWHRyYQ=='
-            type='video/mp4'>
+            src='data:video/webm;base64,GkXfo0AgQoaBAUL3gQFC8oEEQvOBCEKCQAR3ZWJtQoeBAkKFgQIYU4BnQI0VSalmQCgq17FAAw9CQE2AQAZ3aGFtbXlXQUAGd2hhbW15RIlACECPQAAAAAAAFlSua0AxrkAu14EBY8WBAZyBACK1nEADdW5khkAFVl9WUDglhohAA1ZQOIOBAeBABrCBCLqBCB9DtnVAIueBAKNAHIEAAIAwAQCdASoIAAgAAUAmJaQAA3AA/vz0AAA='
+            type='video/webm'>
     </video>
 
     <script>
@@ -171,6 +178,7 @@
         }
 
         let voices = [];
+        let wakeLock;
 
         function checkForVoices() {
             if (voices.length === 0) {
@@ -419,23 +427,39 @@
             }
         }
 
-        function startWorkout() {
+        async function requsetWakeLock() {
+            try {
+                return await navigator.wakeLock.request('screen');
+            } catch (err) {
+                console.error(err, err.message);
+            }
+        }
+
+        async function startWorkout() {
             document.body.scrollTop = 0;
             ui.workoutContainer.style.display = 'block';
             ui.overlay.style.display = 'block';
 
             exercises = parseExercises();
+
+            wakeLock = await requsetWakeLock();
             exercises.unshift({name: 'Get Ready', seconds: 6});
 
             currentExerciseIdx = -1;
             nextExercise();
 
+            ui.screenLockVid.style.display = 'block';
             ui.screenLockVid.play();
             say(`First up, ${exercises[1].name}`);
             worker.addEventListener('message', updateTime);
         }
 
         function stopWorkout() {
+            if (wakeLock) {
+                wakeLock.release();
+                wakeLock = null;
+            }
+            ui.screenLockVid.style.display = 'none';
             ui.screenLockVid.pause();
             ui.workoutContainer.style.display = 'none';
             ui.overlay.style.display = 'none';

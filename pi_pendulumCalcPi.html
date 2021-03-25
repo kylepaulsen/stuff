@@ -1,0 +1,93 @@
+<!DOCTYPE html>
+<html>
+    <head>
+        <title>Estimate Pi with a Pendulum</title>
+    </head>
+    <body>
+        <script>
+            const canvas = document.createElement('canvas');
+            const width = window.innerWidth;
+            const height = window.innerHeight;
+            canvas.width = width;
+            canvas.height = height;
+            const ctx = canvas.getContext('2d');
+
+            document.body.style.margin = 0;
+            document.body.style.overflow = 'hidden';
+            document.body.style.background = '#000';
+            document.body.appendChild(canvas);
+
+            ctx.strokeStyle = "#0f0";
+            ctx.font = '36px sans-serif';
+
+            const gravity = -9.8;
+
+            const createPendulum = (anchorX, anchorY, rodLength, startAngle = 1.5) => {
+                let angle = startAngle;
+
+                const drawWeightAndAnchor = () => {
+                    const x = Math.sin(angle) * rodLength + anchorX;
+                    const y = Math.cos(angle) * rodLength + anchorY;
+                    const weightSize = 50;
+                    const weightHalfSize = weightSize / 2;
+                    ctx.fillStyle = '#f00';
+                    ctx.fillRect(x - weightHalfSize, y - weightHalfSize, weightSize, weightSize);
+
+                    const anchorSize = 30;
+                    const anchorHalfSize = anchorSize / 2;
+                    ctx.fillStyle = '#fff';
+                    ctx.fillRect(anchorX - anchorHalfSize, anchorY - anchorHalfSize, anchorSize, anchorSize);
+
+                    ctx.beginPath();
+                    ctx.moveTo(x, y);
+                    ctx.lineTo(anchorX, anchorY)
+                    ctx.stroke();
+                };
+
+                const pixelsPerM = 300;
+                const rodLengthInMeters = (rodLength / pixelsPerM);
+                const w = Math.sqrt(-gravity / rodLengthInMeters);
+
+                let positiveAngle = startAngle > 0;
+                let periodEstimation = 0;
+                let lastPeriodStart = 0;
+                let periodSamples = 0;
+                let firstPeriod = true;
+
+                const draw = (renderTime = 0) => {
+                    drawWeightAndAnchor();
+                    angle = startAngle * Math.cos(w * renderTime / 1000);
+                    if (angle < 0 && positiveAngle) {
+                    positiveAngle = false;
+                    if (!firstPeriod) {
+                        periodEstimation += (renderTime - lastPeriodStart) / 1000;
+                        periodSamples++;
+                    }
+                    firstPeriod = false;
+                    lastPeriodStart = renderTime;
+                    } else if (angle > 0 && !positiveAngle) {
+                    positiveAngle = true;
+                    }
+                };
+
+                const getPeriodEstimation = () => periodSamples > 0 ? periodEstimation / periodSamples : 0;
+
+                return { draw, getPeriodEstimation, rodLengthInMeters };
+            };
+
+            const pendulum1 = createPendulum(width / 2, 100, 300, 1.3);
+
+            const draw = (t = 0) => {
+                requestAnimationFrame(draw);
+                ctx.clearRect(0, 0, width, height);
+
+                pendulum1.draw(t);
+
+                const piEstimation = pendulum1.getPeriodEstimation() / (2 * Math.sqrt(pendulum1.rodLengthInMeters / -gravity));
+                ctx.fillText(`π is about ${piEstimation}`, 100, 650);
+            };
+
+            draw();
+        </script>
+    </body>
+</html>

@@ -11,107 +11,21 @@ body {
 video {
     margin: 0;
     padding: 0;
-}
-.live1 {
-    -webkit-transform: rotateY(180deg);
-    transform: rotateY(180deg);
-}
-.live2 {
-    -webkit-transform: rotateX(180deg);
-    transform: rotateX(180deg);
-}
-.live3 {
-    -webkit-transform: rotateY(180deg) rotateX(180deg);
-    transform: rotateY(180deg) rotateX(180deg);
+    object-fit: contain;
+    width: 100vw;
+    height: 100vh;
 }
 </style>
 </head>
 <body>
-<div style="text-align: center;">
-<div id="videos" style="line-height: 0; font-size: 0;">
-<!--<canvas id="canvas" width="600" height="450" style="border: 1px solid #000;"></canvas>-->
-</div>
-</div>
-<script type="text/javascript">
-// where i went to figure out this stuff:
-// http://stackoverflow.com/questions/13120591/webrtc-how-to-get-the-webcam-data-as-a-stream-of-data
-// http://stackoverflow.com/questions/667045/getpixel-from-html-canvas
-// https://developer.mozilla.org/en-US/docs/Web/API/Navigator.getUserMedia
-
-(function () {
-    'use strict';
-    function $(qry) {
-        return document.querySelectorAll(qry);
-    }
-
-    var numWidthWise = 6;
-
-    if (!navigator.mediaDevices || !navigator.mediaDevices.getUserMedia) {
-        alert('Needs better browser. Try Chrome.');
-        return;
-    }
-
-    var getWebcamResolution = function(cb) {
-        var vidEl = document.createElement('video');
-        vidEl.setAttribute('autoplay', '');
-        var getRes = function() {
-            vidEl.removeEventListener('playing', getRes, false);
-            cb({width: vidEl.videoWidth, height: vidEl.videoHeight});
-        };
-        vidEl.addEventListener('playing', getRes, false);
-        navigator.mediaDevices.getUserMedia({video: true, audio: false}).then(function(stream) {
-            vidEl.srcObject = stream;
-        }, function(err) {
-            console.log('The following error occured: ' + err);
+    <video id="webcamVideo" autoplay></video>
+    <script>
+        navigator.mediaDevices.getUserMedia({video: true, audio: false}).then((stream) => {
+            const video = document.querySelector('#webcamVideo');
+            video.srcObject = stream;
+        }).catch(err => {
+            alert('Failed to start webcam!');
         });
-    };
-
-    getWebcamResolution(function(reso) {
-        var vidWidth = Math.floor(window.innerWidth / numWidthWise);
-        var vidHeight = Math.floor(vidWidth * (reso.height / reso.width));
-
-        var t = 0;
-        var videoHTML = '';
-        var videoRowHTML = '';
-
-        var numHeightWise = Math.ceil(window.innerHeight / vidHeight);
-
-        for (t = 0; t < numWidthWise; ++t) {
-            if (t % 2 === 0) {
-                videoRowHTML += '<video class="live0" width="' + vidWidth + '" height="' + vidHeight + '" autoplay></video>';
-            } else {
-                videoRowHTML += '<video class="live1" width="' + vidWidth + '" height="' + vidHeight + '" autoplay></video>';
-            }
-        }
-        videoRowHTML += '<br>';
-
-        var videoRow2HTML = (videoRowHTML.replace(/live0/gi, 'live2')).replace(/live1/gi, 'live3');
-
-        for (t = 0; t < numHeightWise; ++t) {
-            if (t % 2 === 0) {
-                videoHTML += videoRowHTML;
-            } else {
-                videoHTML += videoRow2HTML;
-            }
-        }
-
-        var videoDiv = $('#videos')[0];
-        videoDiv.innerHTML = videoHTML;
-
-        navigator.mediaDevices.getUserMedia({video: true, audio: false}).then(function(stream) {
-            var videos = $('video');
-            for (var t = 0; t < videos.length; ++t) {
-                videos[t].srcObject = stream;
-            }
-        }, function(err) {
-            console.log('The following error occured: ' + err);
-        });
-        /*setInterval(function () {
-            // how to put video feed into canvas.
-            ctx.drawImage(video, 0, 0, 320,240);
-        }, 1000/30);  // 30 fps*/
-    });
-})();
-</script>
+    </script>
 </body>
 </html>

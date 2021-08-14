@@ -1,0 +1,393 @@
+<html>
+<head>
+    <title>Webworker Test</title>
+    <style>
+        button {
+            cursor: pointer;
+        }
+    </style>
+</head>
+<body style="overflow: hidden; margin: 0; padding: 0;">
+    <div id="modeBtns" style="position: absolute; top: 0; left: 0; padding: 5px;">
+        <button id="singleBtn" data-search="?single=1">Single Thread</button>
+        <button id="multiBtn" data-search="?multi=1">Web Workers</button>
+        <button id="sharedMultiBtn" data-search="">SharedArrayBuffer Workers</button>
+    </div>
+    <div id="fps" style="position: absolute; top: 0; right: 0; padding: 5px; background: #fff"></div>
+    <script>
+        // install service worker to fake COOP and COEP headers to enable SharedArrayBuffer
+        const installServiceWorker = () => {
+            if (window.crossOriginIsolated) {
+                console.log('Already crossOriginIsolated!');
+                return;
+            }
+            if (!window.isSecureContext) {
+                console.log('Secure context required!');
+                return;
+            }
+            if (!navigator?.serviceWorker?.register) {
+                console.log('Service workers not supported!');
+                return;
+            }
+
+            navigator.serviceWorker.register('sw.js').then((reg) => {
+                console.log('Service Worker REG: ', reg);
+                reg.addEventListener('updatefound', () => {
+                    window.location.reload();
+                });
+                if (reg.active && !navigator.serviceWorker.controller) {
+                    window.location.reload();
+                }
+            }).catch((e) => console.log('FAILED TO REGISTER SERVICE WORKER!!!', e));
+        }
+        installServiceWorker();
+
+        // ========================= WORKER SCRIPT =====================================
+        function workerScript() {
+            const MULTI_THREAD_MODE = 1;
+            const MT_SHARED_MEM_MODE = 2;
+
+            let workerId = null;
+            let totalWorkers = 1;
+            let width;
+            let height;
+
+            let sharedCanvasData;
+            let sharedNewData;
+            let mode = MULTI_THREAD_MODE;
+
+            const actions = {};
+            actions.init = function(data) {
+                workerId = data.id;
+                totalWorkers = data.totalWorkers;
+                width = data.width;
+                height = data.height;
+                sharedCanvasData = new Uint8Array(data.sharedCanvasBuffer);
+                sharedNewData = new Uint8Array(data.sharedNewBuffer);
+                postMessage({action: "log", message: "Hello from worker " + workerId});
+            };
+
+            actions.setMode = function(data) {
+                mode = data.mode;
+            };
+
+            actions.runSim = function(data) {
+                const imgData = new Uint8Array(data.buffer);
+                const sectionHeight = data.sectionHeight;
+                const rowOffset = data.rowOffset;
+                const indexOffset = rowOffset * width * 4;
+                const newImgData = new Uint8Array(width * sectionHeight * 4);
+                const newImgDataLen = newImgData.length;
+
+                for (let i = 0; i < newImgDataLen; i += 4) {
+                    const t = i + indexOffset;
+                    let neighbors = 0;
+                    const y = Math.floor(t / 4 / width);
+                    const x = t / 4 - y * width;
+                    const cell = imgData[t + 3];
+                    const alive = Math.sign(cell);
+                    const xm1 = (x - 1 + width) % width;
+                    const xp1 = (x + 1) % width;
+                    const ym1 = (y - 1 + height) % height;
+                    const yp1 = (y + 1) % height;
+
+                    // nw
+                    neighbors += Math.sign(imgData[4 * (ym1 * width + xm1) + 3]);
+                    // n
+                    neighbors += Math.sign(imgData[4 * (ym1 * width + x) + 3]);
+                    // ne
+                    neighbors += Math.sign(imgData[4 * (ym1 * width + xp1) + 3]);
+                    // w
+                    neighbors += Math.sign(imgData[4 * (y * width + xm1) + 3]);
+                    // e
+                    neighbors += Math.sign(imgData[4 * (y * width + xp1) + 3]);
+                    // sw
+                    neighbors += Math.sign(imgData[4 * (yp1 * width + xm1) + 3]);
+                    // s
+                    neighbors += Math.sign(imgData[4 * (yp1 * width + x) + 3]);
+                    // se
+                    neighbors += Math.sign(imgData[4 * (yp1 * width + xp1) + 3]);
+
+                    if (neighbors === 3 || (alive && neighbors === 2)) {
+                        newImgData[i + 3] = 255;
+                    }
+                }
+                postMessage({action: 'workerDone', buffer: newImgData.buffer, sectionHeight, rowOffset}, [newImgData.buffer]);
+            };
+
+            actions.runSimShared = function() {
+                const imgData = sharedCanvasData;
+                const imgDataLen = imgData.length;
+                const skipOver = 4 * totalWorkers;
+                const newImgData = sharedNewData;
+
+                for (let t = workerId * 4; t < imgDataLen; t += skipOver) {
+                    let neighbors = 0;
+                    const y = Math.floor(t / 4 / width);
+                    const x = t / 4 - y * width;
+                    const cell = imgData[t + 3];
+                    const alive = Math.sign(cell);
+                    const xm1 = (x - 1 + width) % width;
+                    const xp1 = (x + 1) % width;
+                    const ym1 = (y - 1 + height) % height;
+                    const yp1 = (y + 1) % height;
+
+                    // nw
+                    neighbors += Math.sign(imgData[4 * (ym1 * width + xm1) + 3]);
+                    // n
+                    neighbors += Math.sign(imgData[4 * (ym1 * width + x) + 3]);
+                    // ne
+                    neighbors += Math.sign(imgData[4 * (ym1 * width + xp1) + 3]);
+                    // w
+                    neighbors += Math.sign(imgData[4 * (y * width + xm1) + 3]);
+                    // e
+                    neighbors += Math.sign(imgData[4 * (y * width + xp1) + 3]);
+                    // sw
+                    neighbors += Math.sign(imgData[4 * (yp1 * width + xm1) + 3]);
+                    // s
+                    neighbors += Math.sign(imgData[4 * (yp1 * width + x) + 3]);
+                    // se
+                    neighbors += Math.sign(imgData[4 * (yp1 * width + xp1) + 3]);
+
+                    if (neighbors === 3 || (alive && neighbors === 2)) {
+                        newImgData[t + 3] = 255;
+                    } else {
+                        newImgData[t + 3] = 0;
+                    }
+                }
+                postMessage({action: 'workerDoneShared'});
+            };
+
+            // global worker onmessage function
+            onmessage = function (e) {
+                const data = e.data;
+                const action = actions[data.action];
+
+                if (action) {
+                    action(data);
+                } else {
+                    postMessage({action: "error", message: "Not a valid action: " + data.action});
+                }
+            };
+        }
+
+
+        // ========================= MAIN SCRIPT =====================================
+
+        const singleBtn = document.querySelector("#singleBtn");
+        const multiBtn = document.querySelector("#multiBtn");
+        const sharedMultiBtn = document.querySelector("#sharedMultiBtn");
+
+        const SINGLE_THREAD_MODE = 0;
+        const MULTI_THREAD_MODE = 1;
+        const MT_SHARED_MEM_MODE = 2;
+        let mode = MT_SHARED_MEM_MODE;
+        if (location.search.includes('single')) {
+            mode = SINGLE_THREAD_MODE;
+            singleBtn.style.background = "#00ddff";
+        } else if (location.search.includes('multi')) {
+            mode = MULTI_THREAD_MODE;
+            multiBtn.style.background = "#00ddff";
+        } else {
+            sharedMultiBtn.style.background = "#00ddff";
+        }
+
+        document.querySelector("#modeBtns").addEventListener("click", (e) => {
+            const search = e.target.dataset.search;
+            if (search !== undefined) {
+                location.search = search;
+            }
+        });
+
+        if (typeof SharedArrayBuffer === "undefined") {
+            SharedArrayBuffer = ArrayBuffer;
+        }
+
+        const canvas = document.createElement("canvas");
+        const ctx = canvas.getContext("2d");
+        const maxNumWorkers = navigator.hardwareConcurrency || 2;
+        let numWorkers = maxNumWorkers;
+        const width = window.innerWidth
+        const height = window.innerHeight;
+        canvas.width = width;
+        canvas.height = height;
+        document.body.appendChild(canvas);
+
+        let sectionHeight = Math.ceil(canvas.height / numWorkers);
+        const sharedCanvasBuffer = new SharedArrayBuffer(width * height * 4);
+        const sharedCanvasImgData = new Uint8Array(sharedCanvasBuffer);
+        const sharedNewBuffer = new SharedArrayBuffer(width * height * 4);
+        const sharedNewImgData = new Uint8Array(sharedNewBuffer);
+
+        let canvasImageDataObj = ctx.getImageData(0, 0, width, height);
+        let imgData = canvasImageDataObj.data;
+        function paintRandomPixels() {
+            const imgDataLen = imgData.length;
+            for (let t = 0; t < imgDataLen; t += 4) {
+                if (Math.random() < 0.5) {
+                    imgData[t + 3] = 255;
+                }
+            }
+            ctx.putImageData(canvasImageDataObj, 0, 0);
+        }
+
+        function makeWorkerSrcFromFunc(func) {
+            const src = '"use strict"; (' + func.toString() + ')();';
+            const blob = new Blob([src], {type: 'text/javascript'});
+            return window.URL.createObjectURL(blob);
+        }
+
+        const workerSrc = makeWorkerSrcFromFunc(workerScript);
+        const workers = [];
+
+        const workerActions = {};
+
+        workerActions.log = function(data) {
+            console.log(data.message);
+        };
+
+        workerActions.error = function(data) {
+            console.error(data.message);
+        };
+
+        workerActions.workerDone = function(data) {
+            const imageSlice = ctx.createImageData(width, data.sectionHeight);
+            const newImgData = new Uint8Array(data.buffer);
+            imageSlice.data.set(newImgData);
+            workerData.push({imageSlice, rowOffset: data.rowOffset});
+            workersDone++;
+            if (workersDone === numWorkers) {
+                for (let x = 0; x < numWorkers; x++) {
+                    const imgSliceData = workerData[x];
+                    ctx.putImageData(imgSliceData.imageSlice, 0, imgSliceData.rowOffset);
+                }
+                console.log('done');
+                startRender();
+            }
+        };
+
+        workerActions.workerDoneShared = function(data) {
+            workersDone++;
+            if (workersDone === numWorkers) {
+                imgData.set(sharedNewImgData);
+                ctx.putImageData(canvasImageDataObj, 0, 0);
+                startRender();
+            }
+        };
+
+        const workerMessageHandler = function(e) {
+            const data = e.data;
+            const action = workerActions[data.action];
+
+            if (action) {
+                action(data);
+            } else {
+                console.error("Could not understand action: " + data.action);
+            }
+        };
+
+        function setupWorkers() {
+            if (workers.length === 0) {
+                for (let x = 0; x < numWorkers; ++x) {
+                    const newWorker = new Worker(workerSrc);
+                    newWorker.onmessage = workerMessageHandler;
+                    newWorker.postMessage({action: "init", id: x, width, height, totalWorkers: numWorkers, sharedCanvasBuffer, sharedNewBuffer});
+                    newWorker.postMessage({action: "setMode", mode});
+                    workers.push(newWorker);
+                }
+            }
+        }
+
+        let workerData = [];
+        let workersDone = 0;
+
+        const fpsContainer = document.querySelector('#fps');
+        let lastTime = Date.now();
+        let frame = 0;
+        let newImageDataObj = ctx.createImageData(width, height);
+        let newImgData = newImageDataObj.data;
+        function startRender() {
+            frame++;
+            if (frame % 20 === 0) {
+                const now = Date.now();
+                fpsContainer.textContent = 'FPS: ' + (1000 / ((now - lastTime) / 20)).toFixed(2);
+                lastTime = now;
+            }
+            if (mode === SINGLE_THREAD_MODE) {
+                const imgDataLen = imgData.length;
+
+                for (let t = 0; t < imgDataLen; t += 4) {
+                    let neighbors = 0;
+                    const y = Math.floor(t / 4 / width);
+                    const x = t / 4 - y * width;
+                    const cell = imgData[t + 3];
+                    const alive = Math.sign(cell);
+                    const xm1 = (x - 1 + width) % width;
+                    const xp1 = (x + 1) % width;
+                    const ym1 = (y - 1 + height) % height;
+                    const yp1 = (y + 1) % height;
+
+                    // nw
+                    neighbors += Math.sign(imgData[4 * (ym1 * width + xm1) + 3]);
+                    // n
+                    neighbors += Math.sign(imgData[4 * (ym1 * width + x) + 3]);
+                    // ne
+                    neighbors += Math.sign(imgData[4 * (ym1 * width + xp1) + 3]);
+                    // w
+                    neighbors += Math.sign(imgData[4 * (y * width + xm1) + 3]);
+                    // e
+                    neighbors += Math.sign(imgData[4 * (y * width + xp1) + 3]);
+                    // sw
+                    neighbors += Math.sign(imgData[4 * (yp1 * width + xm1) + 3]);
+                    // s
+                    neighbors += Math.sign(imgData[4 * (yp1 * width + x) + 3]);
+                    // se
+                    neighbors += Math.sign(imgData[4 * (yp1 * width + xp1) + 3]);
+
+                    if (neighbors === 3 || (alive && neighbors === 2)) {
+                        newImgData[t + 3] = 255;
+                    } else {
+                        newImgData[t + 3] = 0;
+                    }
+                }
+                imgData.set(newImgData);
+                ctx.putImageData(canvasImageDataObj, 0, 0);
+                setTimeout(startRender, 0);
+                //requestAnimationFrame(startRender); // slower
+            } else if (mode === MULTI_THREAD_MODE) {
+                workersDone = 0;
+                workerData = [];
+                let rowOffset = 0;
+                let sHeight = sectionHeight;
+                for (let x = 0; x < numWorkers; ++x) {
+                    const canvasImageDataObj = ctx.getImageData(0, 0, width, height);
+                    if (x === numWorkers - 1) {
+                        sHeight = height - rowOffset;
+                    }
+                    workers[x].postMessage({action: 'runSim', buffer: canvasImageDataObj.data.buffer, sectionHeight: sHeight, rowOffset}, [canvasImageDataObj.data.buffer]);
+                    rowOffset += sectionHeight;
+                }
+                console.log('send');
+            } else if (mode === MT_SHARED_MEM_MODE) {
+                workersDone = 0;
+                const canvasImageDataObj = ctx.getImageData(0, 0, width, height);
+                sharedCanvasImgData.set(canvasImageDataObj.data);
+                for (let x = 0; x < numWorkers; ++x) {
+                    workers[x].postMessage({action: 'runSimShared'});
+                }
+            }
+        }
+
+        if (mode !== MT_SHARED_MEM_MODE || SharedArrayBuffer !== ArrayBuffer) {
+            paintRandomPixels();
+            setupWorkers();
+            startRender();
+        } else {
+            const errMsg = document.createElement('div');
+            errMsg.setAttribute('style', 'position: absolute; top: 100px; left: 50%; transform: translateX(-50%);');
+            errMsg.textContent = 'SharedArrayBuffers are not currently supported.';
+            document.body.appendChild(errMsg);
+        }
+    </script>
+</body>
+</html>

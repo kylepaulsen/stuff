@@ -1,3 +1,4 @@
+<!DOCTYPE html>
 <html>
     <head>
         <title>Pitch Detector</title>
@@ -8,6 +9,7 @@
                 width: 100%;
                 height: 100%;
                 text-align: center;
+                font-family: sans-serif;
             }
 
             #note {
@@ -18,18 +20,50 @@
 
             #canvas {
                 background: #000000;
-                width: 85%;
+                width: 100%;
                 height: 500px;
             }
 
             #notesCanvas {
                 background: #000000;
             }
+
+            .mainContainer {
+                display: grid;
+                justify-content: center;
+                text-align: left;
+                gap: 10px 0;
+            }
+
+            .canvases {
+                display: flex;
+                width: 85vw;
+            }
+
+            #startContextOverlay {
+                position: fixed;
+                top: 0; left: 0; right: 0; bottom: 0;
+                background: rgba(0, 0, 0, 0.5);
+                display: none;
+                place-items: center;
+                font-size: 100px;
+                color: #fff;
+                cursor: pointer;
+            }
         </style>
     </head>
     <body>
+        <div id="startContextOverlay">Click to Start!</div>
         <div id="note">?</div>
-        <canvas id="canvas"></canvas><canvas id="notesCanvas"></canvas>
+        <div class="mainContainer">
+            <div class="canvases">
+                <canvas id="canvas"></canvas>
+                <canvas id="notesCanvas"></canvas>
+            </div>
+            <div>
+                Octave Offset: <input id="octaveOffset" type="number" value="0" step="1">
+            </div>
+        </div>
 
         <script>
         // This code was adapted from http://www.schmittmachine.com/dywapitchtrack.html
@@ -541,6 +575,8 @@
 
 
         function updateImage(f) {
+            const octaveOffset = parseInt(octaveOffsetInput.value);
+            f = f * (2 ** octaveOffset);
             tempCtx.drawImage(canvas, 0, 0, width, height);
 
             const x = width - 1;
@@ -568,9 +604,19 @@
 
         const context = new AudioContext();
         const noteContainer = document.getElementById("note");
+        const octaveOffsetInput = document.getElementById("octaveOffset");
 
         const lowestPitch = 40; //in hz.
         const targetBufferSize = waveletPitch.neededSampleCount(lowestPitch);
+
+        if (context.state === "suspended") {
+            const overlay = document.querySelector("#startContextOverlay");
+            overlay.style.display = "grid";
+            overlay.addEventListener("click", () => {
+                overlay.remove();
+                context.resume();
+            });
+        }
 
         const getNote = (function() {
             const A4 = 440;
@@ -584,7 +630,7 @@
                 if (stepsModded < 0) {
                     stepsModded += 12;
                 }
-                return noteStrings[stepsModded] + level;
+                return noteStrings[stepsModded] + (level + parseInt(octaveOffsetInput.value));
             };
         })();
 

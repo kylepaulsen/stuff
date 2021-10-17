@@ -1,0 +1,305 @@
+<html>
+    <head>
+        <title>Birdy Boids</title>
+        <meta name="viewport" content="width=device-width, initial-scale=0.5, user-scalable=no">
+        <style>
+            body {
+                margin: 0;
+                overflow: hidden;
+                background: #003;
+            }
+        </style>
+    </head>
+    <body>
+        <script>
+            const makeSpatialHasher2D = (cellSize) => {
+                const posToGridPos = 1 / cellSize;
+                const rows = [];
+                let cellRadiusCache = {};
+
+                const getCell = (x, y) => {
+                    const rowIdx = Math.floor(y * posToGridPos);
+                    const colIdx = Math.floor(x * posToGridPos);
+                    const row = rows[rowIdx] || [];
+                    return row[colIdx] || new Set();
+                };
+
+                const getCellRadius = (x, y, radius = 1) => {
+                    const rowIdx = Math.floor(y * posToGridPos);
+                    const colIdx = Math.floor(x * posToGridPos);
+                    const cacheKey = rowIdx + "," + colIdx;
+                    const cacheResult = cellRadiusCache[cacheKey];
+                    if (cacheResult) {
+                        return cacheResult;
+                    }
+
+                    const allItems = new Set();
+                    for (let dy = -radius; dy <= radius; dy++) {
+                        for (let dx = -radius; dx <= radius; dx++) {
+                            const row = rows[rowIdx + dy] || [];
+                            const cell = row[colIdx + dx] || new Set();
+                            for (const item of cell) {
+                                allItems.add(item);
+                            }
+                        }
+                    }
+                    cellRadiusCache[cacheKey] = allItems;
+                    return allItems;
+                };
+
+                const add = (obj, x, y) => {
+                    const rowIdx = Math.floor(y * posToGridPos);
+                    const colIdx = Math.floor(x * posToGridPos);
+                    const row = rows[rowIdx] || [];
+                    rows[rowIdx] = row;
+                    const cell = row[colIdx] || new Set();
+                    cell.add(obj);
+                    row[colIdx] = cell;
+                };
+
+                const remove = (obj, x, y) => {
+                    const rowIdx = Math.floor(y * posToGridPos);
+                    const colIdx = Math.floor(x * posToGridPos);
+                    const row = rows[rowIdx] || [];
+                    const cell = row[colIdx] || new Set();
+                    cell.delete(obj);
+                };
+
+                const update = (obj, oldX, oldY, newX, newY) => {
+                    const oldRowIdx = Math.floor(oldY * posToGridPos);
+                    const oldColIdx = Math.floor(oldX * posToGridPos);
+                    const newRowIdx = Math.floor(newY * posToGridPos);
+                    const newColIdx = Math.floor(newX * posToGridPos);
+                    if (oldRowIdx !== newRowIdx || oldColIdx !== newColIdx) {
+                        const oldCell = rows[oldRowIdx][oldColIdx];
+                        oldCell.delete(obj);
+                        const row = rows[newRowIdx] || [];
+                        rows[newRowIdx] = row;
+                        const cell = row[newColIdx] || new Set();
+                        cell.add(obj);
+                        row[newColIdx] = cell;
+                    }
+                };
+
+                const clearCellRadiusCache = () => {
+                    cellRadiusCache = {};
+                };
+
+                return {
+                    getCell,
+                    getCellRadius,
+                    clearCellRadiusCache,
+                    add,
+                    remove,
+                    update
+                };
+            };
+
+            const randInt = (min, max) => {
+                return Math.floor(Math.random() * (max - min + 1)) + min;
+            };
+
+            const makeBirdyImage = (color = "#fd0") => {
+                const canvas = document.createElement('canvas');
+                const scale = 1;
+                canvas.width = 20;
+                canvas.height = 14;
+                const ctx = canvas.getContext('2d');
+                ctx.fillStyle = "#f80";
+                ctx.beginPath();
+                ctx.moveTo(scale * 12, scale * 4);
+                ctx.lineTo(scale * 20, scale * 7);
+                ctx.lineTo(scale * 12, scale * 10);
+                ctx.fill();
+
+                ctx.fillStyle = color;
+                ctx.beginPath();
+                ctx.arc(scale * 7, scale * 7, scale * 7, 0, 2 * Math.PI);
+                ctx.fill();
+
+                ctx.fillStyle = "#000";
+                ctx.beginPath();
+                ctx.arc(scale * 9, scale * 5, scale * 1, 0, 2 * Math.PI);
+                ctx.fill();
+
+                return canvas;
+            };
+            const birdyImage = makeBirdyImage();
+            const badBirdyImage = makeBirdyImage("#f88");
+
+            const canvas = document.createElement('canvas');
+            const width = window.innerWidth;
+            const height = window.innerHeight;
+            canvas.width = width;
+            canvas.height = height;
+            document.body.appendChild(canvas);
+
+            const ctx = canvas.getContext('2d');
+            ctx.fillStyle = "#fff";
+
+            // const toRad = Math.PI / 180;
+            const drawBirdy = (birdy) => {
+                const { x, y, chaser } = birdy;
+                const a = Math.atan2(birdy.vy, birdy.vx);
+                ctx.translate(x, y);
+                ctx.rotate(a);
+                ctx.drawImage(chaser ? badBirdyImage : birdyImage, -7, -7);
+                ctx.rotate(-a);
+                ctx.translate(-x, -y);
+            };
+
+            const birdies = [];
+            const makeBird = (x, y, maxSpeed = 2, sight = 75, chaser = false, canMove = true) => {
+                const newBirdy = {
+                    x, y,
+                    vx: 0.5 * (Math.random() * 2 - 1),
+                    vy: 0.5 * (Math.random() * 2 - 1),
+                    maxSpeed,
+                    sight: sight * sight,
+                    lastNeighbors: 0,
+                    canMove,
+                    chaser,
+                };
+                birdies.push(newBirdy);
+                return newBirdy;
+            };
+
+            const maxBirdies = Math.min(Math.floor(500 * (width / devicePixelRatio) * (height / devicePixelRatio) / (1800000 / (devicePixelRatio * devicePixelRatio))), 500);
+            const spatialHasher = makeSpatialHasher2D(150);
+            for (let x = 0; x < maxBirdies; x++) {
+                const newBird = makeBird(randInt(0, width), randInt(0, height), 2 + Math.random(), randInt(130, 170));
+                if (x < 2) {
+                    newBird.chaser = true;
+                    // newBird.sight = 10000;
+                }
+                spatialHasher.add(newBird, newBird.x, newBird.y);
+            }
+
+            const mouseBirdy = makeBird(-1000, 0, 0, 0, true, false);
+            mouseBirdy.vx = 0;
+            mouseBirdy.vy = 0;
+            spatialHasher.add(mouseBirdy, mouseBirdy.x, mouseBirdy.y);
+            const updateMouseBirdy = (x, y) => {
+                spatialHasher.update(mouseBirdy, mouseBirdy.x, mouseBirdy.y, x, y);
+                mouseBirdy.x = x;
+                mouseBirdy.y = y;
+            };
+            window.addEventListener('mousemove', (e) => {
+                updateMouseBirdy(e.pageX, e.pageY);
+            });
+            window.addEventListener('mouseup', () => {
+                updateMouseBirdy(-1000, 0);
+            });
+            window.addEventListener('touchstart', (e) => {
+                const touch = e.touches[0];
+                updateMouseBirdy(touch.pageX, touch.pageY);
+            });
+            window.addEventListener('touchmove', (e) => {
+                const touch = e.touches[0];
+                updateMouseBirdy(touch.pageX, touch.pageY);
+            });
+            window.addEventListener('touchend', () => {
+                updateMouseBirdy(-1000, 0);
+            });
+
+            const birdyPersonalSpace = 20 * 20;
+
+            let lastRender = 0;
+            const render = (ms) => {
+                // if (!ms || ms < 5000) {
+                requestAnimationFrame(render);
+                // }
+                const delta = ms - lastRender;
+                ctx.clearRect(0, 0, width, height);
+                ctx.fillText("FPS: " + 1000 / delta, width - 50, 15);
+                // ctx.fillText(maxBirdies, width - 50, 30);
+                for (let t = 0, len = birdies.length; t < len; t++) {
+                    const birdy = birdies[t];
+                    if (!birdy.canMove) {
+                        continue;
+                    }
+                    let numSightNeighbors = 0;
+                    let numNeighbors = 0;
+                    let matchPosTotalX = 0;
+                    let matchPosTotalY = 0;
+                    let matchVelTotalX = 0;
+                    let matchVelTotalY = 0;
+                    let fleePosTotalX = 0;
+                    let fleePosTotalY = 0;
+                    let numChasers = 0;
+                    let repelTotalX = 0;
+                    let repelTotalY = 0;
+
+                    const sightMult = 1 - 0.90 * Math.min(birdy.lastNeighbors / 10, 1);
+                    const neighborBirdies = spatialHasher.getCellRadius(birdy.x, birdy.y, 1);
+                    for (let neighbor of neighborBirdies) {
+                    // for (let t2 = 0, len = birdies.length; t2 < len; t2++) {
+                        // const neighbor = birdies[t2];
+                        if (neighbor !== birdy) {
+                            const xdiff = birdy.x - neighbor.x;
+                            const ydiff = birdy.y - neighbor.y;
+                            const dist2 = xdiff * xdiff + ydiff * ydiff;
+                            if (dist2 < birdy.sight) {
+                                numSightNeighbors++;
+                                if (dist2 < sightMult * birdy.sight || neighbor.chaser) {
+                                    numNeighbors++;
+                                    matchPosTotalX += neighbor.x;
+                                    matchPosTotalY += neighbor.y;
+                                    matchVelTotalX += neighbor.vx;
+                                    matchVelTotalY += neighbor.vy;
+                                    if (neighbor.chaser) {
+                                        fleePosTotalX += neighbor.x;
+                                        fleePosTotalY += neighbor.y;
+                                        numChasers++;
+                                    }
+                                }
+                            }
+                            if (dist2 < birdyPersonalSpace) {
+                                repelTotalX += xdiff;
+                                repelTotalY += ydiff;
+                            }
+                        }
+                    }
+                    birdy.lastNeighbors = numSightNeighbors;
+
+                    if (numNeighbors) {
+                        birdy.vx += (matchPosTotalX / numNeighbors - birdy.x) * 0.005;
+                        birdy.vy += (matchPosTotalY / numNeighbors - birdy.y) * 0.005;
+                        birdy.vx += (matchVelTotalX / numNeighbors - birdy.vx) * 0.05;
+                        birdy.vy += (matchVelTotalY / numNeighbors - birdy.vy) * 0.05;
+                    }
+                    birdy.vx += 0.05 * repelTotalX;
+                    birdy.vy += 0.05 * repelTotalY;
+                    if (numChasers) {
+                        birdy.vx += (-fleePosTotalX / numChasers + birdy.x) * 0.01;
+                        birdy.vy += (-fleePosTotalY / numChasers + birdy.y) * 0.01;
+                    }
+
+
+                    const xSideRepel = 0.5 * Math.max(50 - birdy.x, 0) - 0.5 * Math.max(birdy.x - (width - 50), 0);
+                    const ySideRepel = 0.5 * Math.max(50 - birdy.y, 0) - 0.5 * Math.max(birdy.y - (height - 50), 0);
+                    birdy.vx += xSideRepel;
+                    birdy.vy += ySideRepel;
+
+                    const birdySpeed = Math.sqrt(birdy.vx * birdy.vx + birdy.vy * birdy.vy);
+                    if (birdySpeed > birdy.maxSpeed) {
+                        birdy.vx = birdy.maxSpeed * birdy.vx / birdySpeed;
+                        birdy.vy = birdy.maxSpeed * birdy.vy / birdySpeed;
+                    }
+
+                    const oldX = birdy.x;
+                    const oldY = birdy.y;
+                    birdy.x += birdy.vx;
+                    birdy.y += birdy.vy;
+                    spatialHasher.update(birdy, oldX, oldY, birdy.x, birdy.y);
+
+                    drawBirdy(birdy);
+                }
+                spatialHasher.clearCellRadiusCache();
+                // ctx.fillRect(mouseBirdy.x - 20, mouseBirdy.y - 20, 40, 40);
+                lastRender = ms;
+            };
+            render();
+        </script>
+    </body>
+</html>

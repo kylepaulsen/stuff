@@ -27,7 +27,7 @@
                 const getCellRadius = (x, y, radius = 1) => {
                     const rowIdx = Math.floor(y * posToGridPos);
                     const colIdx = Math.floor(x * posToGridPos);
-                    const cacheKey = rowIdx + "," + colIdx;
+                    const cacheKey = rowIdx + "," + colIdx + "," + radius;
                     const cacheResult = cellRadiusCache[cacheKey];
                     if (cacheResult) {
                         return cacheResult;
@@ -137,7 +137,6 @@
             const ctx = canvas.getContext('2d');
             ctx.fillStyle = "#fff";
 
-            // const toRad = Math.PI / 180;
             const drawBirdy = (birdy) => {
                 const { x, y, chaser } = birdy;
                 const a = Math.atan2(birdy.vy, birdy.vx);
@@ -148,7 +147,7 @@
                 ctx.translate(-x, -y);
             };
 
-            const birdies = [];
+            let birdies = [];
             const makeBird = (x, y, maxSpeed = 2, sight = 75, chaser = false, canMove = true) => {
                 const newBirdy = {
                     x, y,
@@ -165,12 +164,11 @@
             };
 
             const maxBirdies = Math.min(Math.floor(500 * (width / devicePixelRatio) * (height / devicePixelRatio) / (1800000 / (devicePixelRatio * devicePixelRatio))), 500);
-            const spatialHasher = makeSpatialHasher2D(150);
+            const spatialHasher = makeSpatialHasher2D(170);
             for (let x = 0; x < maxBirdies; x++) {
                 const newBird = makeBird(randInt(0, width), randInt(0, height), 2 + Math.random(), randInt(130, 170));
                 if (x < 2) {
                     newBird.chaser = true;
-                    // newBird.sight = 10000;
                 }
                 spatialHasher.add(newBird, newBird.x, newBird.y);
             }
@@ -186,9 +184,6 @@
             };
             window.addEventListener('mousemove', (e) => {
                 updateMouseBirdy(e.pageX, e.pageY);
-            });
-            window.addEventListener('mouseup', () => {
-                updateMouseBirdy(-1000, 0);
             });
             window.addEventListener('touchstart', (e) => {
                 const touch = e.touches[0];
@@ -206,20 +201,19 @@
 
             let lastRender = 0;
             const render = (ms) => {
-                // if (!ms || ms < 5000) {
                 requestAnimationFrame(render);
-                // }
                 const delta = ms - lastRender;
                 ctx.clearRect(0, 0, width, height);
                 // ctx.fillText("FPS: " + 1000 / delta, width - 50, 15);
                 // ctx.fillText(maxBirdies, width - 50, 30);
+                let birdyDied = false;
                 for (let t = 0, len = birdies.length; t < len; t++) {
                     const birdy = birdies[t];
                     if (!birdy.canMove) {
                         continue;
                     }
-                    let numSightNeighbors = 0;
-                    let numNeighbors = 0;
+                    let numVisionBlockingNeighbors = 0;
+                    let numVisibleNeighbors = 0;
                     let matchPosTotalX = 0;
                     let matchPosTotalY = 0;
                     let matchVelTotalX = 0;
@@ -240,9 +234,9 @@
                             const ydiff = birdy.y - neighbor.y;
                             const dist2 = xdiff * xdiff + ydiff * ydiff;
                             if (dist2 < birdy.sight) {
-                                numSightNeighbors++;
+                                numVisionBlockingNeighbors++;
                                 if (dist2 < sightMult * birdy.sight || neighbor.chaser) {
-                                    numNeighbors++;
+                                    numVisibleNeighbors++;
                                     matchPosTotalX += neighbor.x;
                                     matchPosTotalY += neighbor.y;
                                     matchVelTotalX += neighbor.vx;
@@ -251,6 +245,10 @@
                                         fleePosTotalX += neighbor.x;
                                         fleePosTotalY += neighbor.y;
                                         numChasers++;
+                                        // if (dist2 <= 400) {
+                                        //     birdy.dead = true;
+                                        //     birdyDied = true;
+                                        // }
                                     }
                                 }
                             }
@@ -260,13 +258,13 @@
                             }
                         }
                     }
-                    birdy.lastNeighbors = numSightNeighbors;
+                    birdy.lastNeighbors = numVisionBlockingNeighbors;
 
-                    if (numNeighbors) {
-                        birdy.vx += (matchPosTotalX / numNeighbors - birdy.x) * 0.005;
-                        birdy.vy += (matchPosTotalY / numNeighbors - birdy.y) * 0.005;
-                        birdy.vx += (matchVelTotalX / numNeighbors - birdy.vx) * 0.05;
-                        birdy.vy += (matchVelTotalY / numNeighbors - birdy.vy) * 0.05;
+                    if (numVisibleNeighbors) {
+                        birdy.vx += (matchPosTotalX / numVisibleNeighbors - birdy.x) * 0.005;
+                        birdy.vy += (matchPosTotalY / numVisibleNeighbors - birdy.y) * 0.005;
+                        birdy.vx += (matchVelTotalX / numVisibleNeighbors - birdy.vx) * 0.05;
+                        birdy.vy += (matchVelTotalY / numVisibleNeighbors - birdy.vy) * 0.05;
                     }
                     birdy.vx += 0.05 * repelTotalX;
                     birdy.vy += 0.05 * repelTotalY;
@@ -295,8 +293,16 @@
 
                     drawBirdy(birdy);
                 }
+                // if (birdyDied) {
+                //     birdies = birdies.filter(birdy => {
+                //         if (birdy.dead) {
+                //             spatialHasher.remove(birdy, birdy.x, birdy.y);
+                //             return false;
+                //         }
+                //         return true;
+                //     });
+                // }
                 spatialHasher.clearCellRadiusCache();
-                // ctx.fillRect(mouseBirdy.x - 20, mouseBirdy.y - 20, 40, 40);
                 lastRender = ms;
             };
             render();

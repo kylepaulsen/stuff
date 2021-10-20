@@ -25,7 +25,7 @@ const buildShader = (iters = 30, numRoots = 8) => {
 		#define NUM_ROOTS ${numRoots}
 		#define mul(a, b) vec2(a.x*b.x-a.y*b.y, a.x*b.y+a.y*b.x)
 
-		precision mediump float;
+		precision highp float;
 		uniform int showRoots;
 		uniform vec2 windowMin;
 		uniform vec2 windowSize;

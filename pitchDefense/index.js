@@ -95,6 +95,9 @@
     }
 
     const startGame = co.wrap(function*() {
+        if (!audioContext) {
+            yield setUpMicrophone();
+        }
         if (gameState === 'menu') {
             gameState = 'setup';
             playPitchHint = true;
@@ -115,6 +118,7 @@
                 yield sleep(rocketWaitTime);
             }
         } else if (gameState === 'micSetup') {
+            // eslint-disable-next-line no-alert
             alert('Please grant this page microphone access.');
         }
     });
@@ -251,8 +255,6 @@
 
         soundWaves = game.add.graphics(0, 0);
         explosions = game.add.group();
-
-        setUpMicrophone();
     }
 
     function update() {
@@ -330,7 +332,7 @@
         const targetBufferSize = waveletPitch.neededSampleCount(lowestPitch);
 
         waveletPitch.setSampleRate(audioContext.sampleRate);
-        navigator.mediaDevices.getUserMedia({audio: true}).then(function(stream) {
+        return navigator.mediaDevices.getUserMedia({audio: true}).then(function(stream) {
             const source = audioContext.createMediaStreamSource(stream);
             const node = audioContext.createScriptProcessor(targetBufferSize, 2, 2);
             let soundWaveTime = 0;
@@ -357,13 +359,15 @@
             node.connect(audioContext.destination);
             gameState = 'menu';
         }).catch(function() {
+            // eslint-disable-next-line no-alert
             alert('Sorry... This game requires a microphone.');
+            audioContext = null;
             gameState = 'unplayable';
         });
     }
 
     function playFreq(freq) {
-        var oscillator = audioContext.createOscillator();
+        const oscillator = audioContext.createOscillator();
 
         oscillator.frequency.value = freq; // value in hertz
         oscillator.connect(audioContext.destination);

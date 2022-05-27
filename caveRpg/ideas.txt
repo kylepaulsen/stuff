@@ -1,0 +1,120 @@
+= main stats =
+hp                +20 for each level?
+mp                 +3 for each level?
+att                +3 for each level?
+mag att            +3 for each level?
+def                +3 for each level?
+mag def            +3 for each level?
+speed              +3 for each level?
+acc                +3 for each level?
+eva                +3 for each level?
+crit chance        (only gear can modify)
+
+= special stats =
+light rad
+exp
+hunger?
+energy (sleep)?
+
+= leveling stats =
+strength - hp, def, att
+intelligence - mp, mag def, mag att
+dexterity - speed, acc, eva
+
+= rare & unique equipment =
+weapon -     4-6 of: hp, mp, att, mag att, acc, crit
+helms -      3-5 of: hp, mp, def, mag def, eva
+body armor - 3-5 of: hp, mp, def, mag def, eva
+gloves -     3-5 of: att, mag att, def, mag def, acc, eva, crit chance
+boots -      3-5 of: def, mag def, speed, acc, eva, crit chance
+belt -       3-5 of: hp, mp, att, mag att, def, mag def, eva... att or mag att???
+ring -       3-5 of: anything, except special stats.
+amulet -     4-6 of: anything, including special stats
+
+= common equipment =
+weapon -     1-2 of: att, mag att, acc (low level always att)
+helms -      1-2 of: def, mag def, eva (low level always def)
+body armor - 1-2 of: def, mag def, eva (low level always def)
+gloves -     1-2 of: att, mag att, def, mag def, eva (low level always def)
+boots -      1-2 of: speed, def, mag def, eva
+belt -       1-2 of: hp, mp, eva
+ring -       1-2 of: anything, except special stats.
+amulet -     1-2 of: anything, including special stats
+
+= uncommon equipment =
+weapon -     2-3 of: hp, mp, att, mag att, acc, crit
+helms -      2-3 of: hp, mp, def, mag def, eva
+body armor - 2-3 of: hp, mp, def, mag def, eva
+gloves -     2-3 of: att, mag att, def, mag def, acc, eva, crit chance
+boots -      2-3 of: def, mag def, speed, acc, eva, crit chance
+belt -       2-3 of: hp, mp, att, mag att, def, mag def, eva
+ring -       2-3 of: anything, except special stats.
+amulet -     3-4 of: anything, including special stats
+
+only weapons and body armor can have sockets, works like ff7
+
+= status effects =
+poison - minus % hp each turn, but can't kill.
+fatigued - final damage done is halfed.
+weak - att is halfed
+amnesia - magic att is halfed
+fragile - def is halfed
+sad - mag def is halfed
+slow - speed is halfed
+blind - acc is halfed, light rad goes down
+marked - eva is halfed, chance of crits on target doubled
+burn - minus % hp each turn, and can kill.
+paralyzed - 33% chance to lose turn?
+afraid - short term "run away" effect.
+
+
+level 100 stuff
+hp: (20 * 100 * 0.66 + 100) + 800 (body armor) + 600 (belt) + 400 (helm) = 3220
+def: (5 * 100 * 0.66 + 30) + 350 (body armor) + (200 * 3) (helm, gloves, boots) = 1310
+att: (5 * 100 * 0.66 + 30) + 700 (weapon) + 250 (gloves) = 1310
+
+with att and def around 1300, damage should be around 240
+
+
+
+maybe damage formula:
+damage = (att / def) ^ 0.5 * 3200 * (att / 1400) * 0.06 (3200 is about the hp at level 100 and .06 is about the percent max health monster hits should do on level 100)
+Math.min((att + 300) / 600, 1) * (((att/def)**0.1)*(0.1*att)+0.1*att)
+
+{
+	let lev = 1;
+	let balance = 0.33;
+	let ptsPerLev = 5;
+	let hpPtsPerLev = 20;
+	let att = lev*ptsPerLev+30+lev*ptsPerLev*0.33+700*(lev / 100);
+	let def = lev*ptsPerLev+30+lev*ptsPerLev*balance+950*(lev / 100)*balance;
+	let hp = lev*hpPtsPerLev+100+lev*hpPtsPerLev*balance+1800*(lev / 100)*balance;
+	let expectedHp = 100*hpPtsPerLev+100+100*hpPtsPerLev*0.33+1800*.33;
+	`${att}, ${def}, ${hp} ${(((att/def)**0.1)*(att*0.1)+0.1*att) / hp}`
+}
+
+
+https://www.google.com/search?q=gamedev+growth+equation+diminishing+returns&rlz=1C5CHFA_enUS735US735&oq=gamedev+growth+equation+deminish&aqs=chrome.2.69i57j33l3.34465j0j9&sourceid=chrome&ie=UTF-8
+
+const hitChance = (acc, eva) => 0.75 / ((1 + 2 ** (0.12 * (eva - acc - 20))) ** 0.2) + 0.25;
+const damage = (moveAtt, att, def) => moveAtt + att - def;
+
+// This makes a softplus function or "hockey stick" like curve. Similar to ReLU except continuous.
+// This is good for mapping a changing value to a deminishing return limit value.
+const makeSoftPlusFunc = (yInter, limitValue, approxSlope = 1) => {
+	const invSlope = 1 / Math.abs(approxSlope);
+	const sign = yInter < limitValue ? -1 : 1;
+	const xOffset = Math.log(Math.E ** (invSlope * Math.abs(limitValue - yInter)) - 1);
+	return x => (sign * Math.log(1 + Math.E ** (xOffset - x)) + (invSlope * limitValue)) / invSlope;
+}
+
+// makes a logistic curve or "S shaped" curve function.
+const makeSigmoidCurve = (scaleX = 1, scaleY = 1, shift = 0, skew = 1) => x => scaleY / ((1 + Math.E ** ((shift * scaleX) - (x / scaleX))) ** skew);
+
+const hitChanceSigmoid = makeSigmoidCurve(45, -0.75, -0.024, 10);
+const hitChance = (acc, eva) => hitChanceSigmoid(eva - acc) + 1;
+
+const makeRationalCurve = (mainScale, subScale, limitValue) => x => mainScale * x / (x + subScale) + (limitValue - mainScale);
+const speedWaitFactor = makeRationalCurve(-1.3, 200, 0.3);
+
+https://codesandbox.io/s/l6k20jrlm?from-embed

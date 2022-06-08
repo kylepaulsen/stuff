@@ -1,0 +1,32 @@
+<!doctype html>
+<html>
+<head>
+    <meta charset="UTF-8">
+    <title>WebRTC p2p Chat</title>
+    <link rel="stylesheet" href="style.css" />
+</head>
+<body>
+
+<p>This is an example of a Peer 2 Peer multi-user-chat program using WebRTC and Webtorrent trackers to help with signalling.</p>
+<p>You can try this by yourself by opening up multiple tabs of this same page.</p>
+
+<div id="joinRoomModal" class="modal">
+    Joining a room. Enter room name (case sensitive): <br>
+    <input type="text" id="joinRoomNameInput" value="test" maxlength="9">
+    <button id="sendJoinRoomBtn">Join</button>
+</div>
+
+<div id="connectingModal" class="modal">
+    <h2>Connecting.</h2><h3>Please Wait...</h3>
+</div>
+
+<div id="chatStuff" style="display: none;">
+    <div id="msgDiv"></div>
+    Message: <input type="text" id="msgBox"> <input type="button" id="sendBtn" value="Send">
+</div>
+
+<script src="bugout.min.js"></script>
+<script src="main.js"></script>
+
+</body>
+</html>

@@ -1,0 +1,168 @@
+* {
+    box-sizing: border-box;
+}
+
+html, body {
+    background: #000;
+    color: #000;
+    font-family: sans-serif;
+    font-size: 12px;
+    width: 100%;
+    height: 100%;
+    margin: 0;
+    padding: 0;
+    overflow: hidden;
+}
+
+/* Scale canvas with resize attribute to full size */
+canvas[resize] {
+    flex: 1 1 auto;
+    width: 100%;
+    height: 100%;
+}
+
+hr {
+    border: 0;
+    border-top: 1px solid #000;
+    margin: 15px 0;
+}
+
+input {
+    width: 100%;
+}
+
+.app {
+    display: flex;
+    height: 100%;
+}
+
+.toolbar {
+    flex: 0 0 100px;
+    background: #aaa;
+    padding: 5px;
+    max-width: 100px;
+}
+
+.title {
+    text-align: center;
+    margin: 5px 0 16px 0;
+    font-weight: bold;
+    font-size: 16px;
+}
+
+.tools {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    grid-auto-rows: 40px;
+    gap: 5px;
+}
+
+.toolBtn {
+    display: block;
+    background: transparent;
+    padding: 4px;
+    width: 40px;
+    height: 40px;
+    margin: 0;
+    border: 1px solid #777;
+    cursor: pointer;
+}
+
+.toolBtn.active {
+    background: #fff;
+}
+
+.toolSettingsSection {
+    display: none;
+}
+
+.toolSettings {
+    display: none;
+}
+
+.toolSettings > div:not(:last-child) {
+    margin-bottom: 5px;
+}
+
+.toolSettingsTitle {
+    font-weight: bold;
+    margin-bottom: 10px;
+}
+
+.globalSettings > div:not(:last-child) {
+    margin-bottom: 5px;
+}
+
+.globalColorSettings {
+    display: grid;
+    gap: 5px;
+    grid-template-columns: 1fr 1fr;
+}
+
+.settingInput {
+    width: 100%;
+}
+
+.color-picker {
+    position: absolute;
+    padding: 0 5px 5px 0;
+    border: 4px solid #fff;
+}
+
+.colorBtn {
+    width: 40px;
+    height: 40px;
+    border: 2px solid #000;
+    cursor: pointer;
+}
+
+.startP2PBtn {
+    position: fixed;
+    bottom: 6px;
+    left: 3px;
+    font-size: 18px;
+    cursor: pointer;
+}
+
+.peer {
+    position: absolute;
+    top: 0px;
+    left: -100px;
+    width: 20px;
+    height: 20px;
+    transform: translateY(-20px);
+    background-color: #ff0000;
+    -webkit-mask: url(img/pencilTool.svg) no-repeat center;
+    mask: url(img/pencilTool.svg) no-repeat center;
+    pointer-events: none;
+}
+
+.peerCount {
+    position: fixed;
+    top: 0;
+    right: 0;
+    display: flex;
+    align-items: center;
+    padding: 5px;
+    pointer-events: none;
+    display: none;
+}
+
+.peerCountIcon {
+    margin-right: 4px;
+    width: 20px;
+    height: 20px;
+    background-color: #ff0000;
+    -webkit-mask: url(img/person.svg) no-repeat center;
+    mask: url(img/person.svg) no-repeat center;
+}
+
+.peerCountValue {
+    color: #fff;
+    font-size: 14px;
+    text-shadow: 0 0 6px #000, 0 0 6px #000, 0 0 3px #000;
+}
+
+.show {
+    display: block;
+}

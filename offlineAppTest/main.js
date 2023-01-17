@@ -4,6 +4,9 @@ const height = window.innerHeight;
 
 canvas.width = width;
 canvas.height = height;
+canvas.style.position = 'absolute';
+canvas.style.top = 0;
+canvas.style.left = 0;
 const ctx = canvas.getContext('2d');
 
 ctx.strokeStyle = "#fff";
@@ -13,8 +16,12 @@ document.body.style.margin = '0';
 document.body.style.overflow = 'hidden';
 document.body.style.background = "#000";
 document.body.style.color = "#fff";
+document.body.userSelect = 'none';
 
 let mouseDown = false;
+
+let lastX;
+let lastY;
 
 const handleStartLine = (e) => {
     mouseDown = true;
@@ -29,8 +36,12 @@ const handleDrawLine = (e) => {
         e.preventDefault();
         const x = e.touches?.[0]?.clientX ?? e.clientX;
         const y = e.touches?.[0]?.clientY ?? e.clientY;
-        ctx.lineTo(x, y);
-        ctx.stroke();
+        if (x !== lastX || y !== lastY) {
+            ctx.lineTo(x, y);
+            ctx.stroke();
+        }
+        lastX = x;
+        lastY = y;
     }
 };
 
@@ -45,8 +56,11 @@ canvas.addEventListener('mousemove', handleDrawLine);
 canvas.addEventListener('touchend', handleEndLine);
 canvas.addEventListener('mouseup', handleEndLine);
 
-document.querySelector("#test").addEventListener("click", () => {
-    fetch("https://kylepaulsen.com").then(res => res.text()).then(data => {
-        alert(data.substring(0, 100));
-    });
+const clearBtn = document.querySelector('#clear');
+clearBtn.style.position = 'fixed';
+clearBtn.style.bottom = '0px';
+clearBtn.style.left = '0px';
+clearBtn.style.zIndex = 1;
+clearBtn.addEventListener('click', () => {
+    ctx.clearRect(0, 0, width, height);
 });

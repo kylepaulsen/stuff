@@ -10,6 +10,8 @@ canvas.style.left = 0;
 const ctx = canvas.getContext('2d');
 
 ctx.strokeStyle = "#fff";
+ctx.lineCap = 'round';
+ctx.lineWidth = 3;
 
 document.body.appendChild(canvas);
 document.body.style.margin = '0';
@@ -25,10 +27,8 @@ let lastY;
 
 const handleStartLine = (e) => {
     mouseDown = true;
-    const x = e.touches?.[0]?.clientX ?? e.clientX;
-    const y = e.touches?.[0]?.clientY ?? e.clientY;
-    ctx.moveTo(x, y);
-    ctx.beginPath();
+    lastX = e.touches?.[0]?.clientX ?? e.clientX;
+    lastY = e.touches?.[0]?.clientY ?? e.clientY;
 };
 
 const handleDrawLine = (e) => {
@@ -37,6 +37,8 @@ const handleDrawLine = (e) => {
         const x = e.touches?.[0]?.clientX ?? e.clientX;
         const y = e.touches?.[0]?.clientY ?? e.clientY;
         if (x !== lastX || y !== lastY) {
+            ctx.beginPath();
+            ctx.moveTo(lastX, lastY);
             ctx.lineTo(x, y);
             ctx.stroke();
         }

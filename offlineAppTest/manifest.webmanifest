@@ -1,0 +1,16 @@
+{
+    "background_color": "#000000",
+    "theme_color": "#444444",
+    "description": "A simple drawing demo.",
+    "display": "fullscreen",
+    "icons": [
+        {
+            "src": "icon.png",
+            "sizes": "512x512",
+            "type": "image/png"
+        }
+    ],
+    "name": "PWA Drawing Demo",
+    "short_name": "Draw",
+    "start_url": "index.html"
+}

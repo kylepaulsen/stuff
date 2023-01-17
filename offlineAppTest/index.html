@@ -1,0 +1,17 @@
+<html>
+    <head>
+        <meta name="viewport" content="width=device-width, initial-scale=1">
+        <link rel="manifest" href="manifest.webmanifest" />
+    </head>
+    <body>
+        <div id="test">Try to draw</div>
+        <script src="main.js"></script>
+        <script>
+            navigator.serviceWorker.register("sw.js").then(function(reg) {
+                console.log("Service Worker Registered");
+            }).catch(function(error) {
+                console.log("Service Worker Registration Failed", error);
+            });
+        </script>
+    </body>
+</html>

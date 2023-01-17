@@ -6,7 +6,7 @@ const cacheFiles = async () => {
     const cache = await caches.open(`cache-v${cacheVersion}`);
     console.log("[Service Worker] Caching files");
     await cache.addAll([
-        "/", "/index.html", "/main.js", "/sw.js"
+        "index.html", "main.js", "sw.js"
     ]);
 };
 

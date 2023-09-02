@@ -1,0 +1,141 @@
+<html>
+    <body>
+        <div>
+            Server: <input data-id="serverAddress" value="ws://localhost:8080/" /> <button data-id="connectBtn">Connect</button> <span data-id="connectionStatus">Not connected</span>
+        </div>
+        <div>
+            <button data-id="addMedia">Add Media</button>
+        </div>
+        <div>
+            <audio data-id="audio" controls></audio>
+        </div>
+        <div data-id="files"></div>
+        <script src="socket.js"></script>
+        <script>
+            let socketUrl = "ws://localhost:8080/";
+            const HEARTBEAT_INTERVAL = 20000;
+            let ws;
+
+            const ui = {};
+            {
+                const els = document.querySelectorAll('[data-id]');
+                els.forEach(el => {
+                    ui[el.dataset.id] = el;
+                });
+            }
+
+            const sleep = (ms) => new Promise(resolve => setTimeout(resolve, ms));
+
+            let fadingOut = false;
+            const fadeOutAndStop = async () => {
+                if (!ui.audio || ui.audio.paused || fadingOut) {
+                    return;
+                }
+                fadingOut = true;
+                const userVolume = ui.audio.volume;
+                const fadeOutTime = 5000;
+                const volumeChangeRate = 50;
+                const volumeStep = userVolume / (fadeOutTime / volumeChangeRate);
+                let volume = userVolume;
+                while (volume > 0) {
+                    volume -= volumeStep;
+                    ui.audio.volume = Math.max(Math.min(volume, 1), 0);
+                    await sleep(volumeChangeRate);
+                }
+                ui.audio.pause();
+                ui.audio.volume = userVolume;
+                ui.audio.currentTime = 0;
+                fadingOut = false;
+            };
+
+            let reconnectTimeout;
+            const openWebsocketConnection = () => {
+                clearTimeout(reconnectTimeout);
+                const socketOptions = {
+                    url: socketUrl,
+                    events: {
+                        open: (e, socket) => {
+                            ws = socket;
+                            ws.sendJSON({ action: "joinRoom", room: "remoteMediaPlayer" });
+                            ui.connectionStatus.innerText = "Connected";
+                        },
+                        close: (e, ws) => {
+                            console.log("Socket closed");
+                            ui.connectionStatus.innerText = "Not connected";
+
+                            // try to reconnect
+                            reconnectTimeout = setTimeout(() => {
+                                ws = connectWebSocket(socketOptions);
+                            }, 100);
+                        },
+                        message: (e, ws) => {
+                            console.log("Message received: ", e.data);
+                        }
+                    },
+                    actions: {
+                        sendOptions: (ws, data) => {
+                            ws.sendJSON({ action: "options", options: allMedia.map(m => m.name) });
+                        },
+                        play: async (ws, data) => {
+                            const media = allMedia.find((m) => m.name === data.name);
+                            if (!ui.audio.paused) {
+                                await fadeOutAndStop();
+                            }
+                            if (media) {
+                                ui.audio.src = media.url;
+                                ui.audio.play();
+                            }
+                        },
+                        stop: (ws, data) => {
+                            fadeOutAndStop();
+                        }
+                    }
+                };
+                ws = connectWebSocket(socketOptions);
+            };
+
+            const allMedia = [];
+
+            const renderFiles = () => {
+                ui.files.innerHTML = "";
+                allMedia.forEach((mediaObject) => {
+                    const button = document.createElement("button");
+                    button.innerText = mediaObject.name;
+                    button.addEventListener("click", () => {
+                        ui.audio.src = mediaObject.url;
+                        ui.audio.play();
+                    });
+                    button.style.display = "block";
+                    ui.files.appendChild(button);
+                });
+            };
+
+            ui.addMedia.addEventListener("click", () => {
+                const input = document.createElement("input");
+                input.type = "file";
+                input.multiple = true;
+                input.click();
+
+                input.addEventListener("change", (e) => {
+                    Array.from(e.target.files).forEach((file) => {
+                        console.log(file);
+                        allMedia.push({ name: file.name, url: URL.createObjectURL(file) });
+                    });
+                    ws.sendJSON({ action: "options", options: allMedia.map(m => m.name) });
+                    renderFiles();
+                })
+            });
+
+            ui.serverAddress.addEventListener("input", (e) => {
+                socketUrl = e.target.value;
+                localStorage.socketUrl = socketUrl;
+            });
+            socketUrl = localStorage.socketUrl || "ws://localhost:8080/";
+            ui.serverAddress.value = socketUrl;
+
+            ui.connectBtn.addEventListener("click", () => {
+                openWebsocketConnection();
+            });
+        </script>
+    </body>
+</html>

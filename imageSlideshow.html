@@ -1,0 +1,164 @@
+<html>
+    <head>
+        <title>Image Slideshow</title>
+        <style>
+            html, body {
+                background: #000;
+                color: #fff;
+                margin: 0;
+                padding: 0;
+                width: 100vw;
+                height: 100vh;
+                overflow: hidden;
+            }
+
+            .loadImagesBtn {
+                position: fixed;
+                top: 0;
+                left: 0;
+                z-index: 10;
+                opacity: 0;
+                transition: opacity 0.5s ease-in-out;
+            }
+
+            .img {
+                width: 100%;
+                height: 100%;
+                background-size: contain;
+                background-repeat: no-repeat;
+                background-position: center;
+                position: absolute;
+                top: 0;
+                left: 0;
+                opacity: 0;
+            }
+
+            .visible {
+                opacity: 1;
+            }
+        </style>
+    </head>
+    <body>
+        <button data-id="loadImagesBtn" class="loadImagesBtn visible">Load Images</button>
+        <div data-id="img1" class="img" style="opacity: 1;"></div>
+        <div data-id="img2" class="img"></div>
+        <script>
+            const ui = {};
+            {
+                document.querySelectorAll('[data-id]').forEach(el => {
+                    ui[el.dataset.id] = el
+                })
+            }
+
+            const shuffleArray = (array) => {
+                for (let i = array.length - 1; i > 0; i--) {
+                    const j = Math.floor(Math.random() * (i + 1));
+                    [array[i], array[j]] = [array[j], array[i]];
+                }
+            };
+
+            const parseNum = (str, defaultVal) => {
+                const num = parseFloat(str);
+                if (Number.isNaN(num)) {
+                    return defaultVal;
+                }
+                return num;
+            };
+
+            const searchParams = new URLSearchParams(location.search);
+
+            const IMAGE_TIMER = parseNum(searchParams.get('image_timer'), 10) * 1000;
+            const TRANSITION_TIMER = parseNum(searchParams.get('transition_timer'), 3);
+
+            ui.img1.style.transition = `opacity ${TRANSITION_TIMER}s ease-in-out`;
+            ui.img2.style.transition = `opacity ${TRANSITION_TIMER}s ease-in-out`;
+
+            let allFiles = [];
+            let currentIndex = 0;
+            let activeImage = ui.img1;
+            let hiddenImage = ui.img2;
+            let started = false;
+
+            const incrementIndex = () => {
+                currentIndex++;
+                if (currentIndex >= allFiles.length) {
+                    currentIndex = 0;
+                    shuffleArray(allFiles);
+                }
+                return currentIndex;
+            };
+
+            const makeBgImageUrl = (url) => `url(${url}), linear-gradient(rgb(0, 0, 0), rgb(0, 0, 0))`;
+
+            const nextImage = () => {
+                activeImage.classList.remove('visible');
+                hiddenImage.classList.add('visible');
+
+                const temp = activeImage;
+                activeImage = hiddenImage;
+                hiddenImage = temp;
+
+                const nextIdx = incrementIndex();
+
+                setTimeout(() => {
+                    URL.revokeObjectURL(hiddenImage.dataset.url);
+                    const url = URL.createObjectURL(allFiles[nextIdx]);
+                    hiddenImage.dataset.url = url;
+                    hiddenImage.style.backgroundImage = makeBgImageUrl(url);
+                }, TRANSITION_TIMER * 1000 + 10);
+
+                setTimeout(nextImage, IMAGE_TIMER);
+            };
+
+            const startSlideShow = () => {
+                if (allFiles[currentIndex]) {
+                    started = true;
+                    let url = URL.createObjectURL(allFiles[currentIndex]);
+                    ui.img1.dataset.url = url;
+                    ui.img1.style.backgroundImage = makeBgImageUrl(url);
+                    incrementIndex();
+
+                    url = URL.createObjectURL(allFiles[currentIndex]);
+                    ui.img2.dataset.url = url;
+                    ui.img2.style.backgroundImage = makeBgImageUrl(url);
+
+                    ui.loadImagesBtn.classList.remove('visible');
+                    setTimeout(nextImage, IMAGE_TIMER);
+                }
+            };
+
+            ui.loadImagesBtn.onclick = () => {
+                const fileInput = document.createElement('input');
+                fileInput.type = 'file';
+                fileInput.accept = 'image/*';
+                fileInput.multiple = true;
+                fileInput.click();
+
+                fileInput.onchange = (e) => {
+                    const files = e.target.files;
+                    if (files.length) {
+                        allFiles = allFiles.concat(Array.from(files));
+                        shuffleArray(allFiles);
+
+                        if (!started) {
+                            startSlideShow();
+                        }
+                    }
+                }
+            };
+
+            let loadImagesBtnFadeTimeout;
+            const showLoadImagesBtn = () => {
+                if (started) {
+                    ui.loadImagesBtn.classList.add('visible');
+                    clearTimeout(loadImagesBtnFadeTimeout);
+                    loadImagesBtnFadeTimeout = setTimeout(() => {
+                        ui.loadImagesBtn.classList.remove('visible');
+                    }, 3000);
+                }
+            }
+            window.addEventListener('mousemove', showLoadImagesBtn);
+            window.addEventListener('click', showLoadImagesBtn);
+        </script>
+    </body>
+</html>

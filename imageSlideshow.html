@@ -157,8 +157,19 @@
                     }, 3000);
                 }
             }
+
+            const toggleFullscreen = () => {
+                showLoadImagesBtn();
+                if (document.fullscreenElement) {
+                    document.exitFullscreen();
+                } else {
+                    document.documentElement.requestFullscreen();
+                }
+            }
+
             window.addEventListener('mousemove', showLoadImagesBtn);
-            window.addEventListener('click', showLoadImagesBtn);
+            ui.img1.addEventListener('click', toggleFullscreen);
+            ui.img2.addEventListener('click', toggleFullscreen);
         </script>
     </body>
 </html>

@@ -1,0 +1,143 @@
+<!DOCTYPE html>
+<html>
+<head>
+	<meta charset="utf-8">
+	<meta name="viewport" content="width=device-width">
+	<title>Hilbert curve</title>
+	<style>
+		body {
+			background: #000;
+			color: #fff;
+			font-family: sans-serif;
+		}
+		h3 {
+			margin: 0 0 10px 0;
+		}
+		.settings {
+			padding: 10px 50px;
+		}
+		input {
+			width: 60px;
+		}
+	</style>
+</head>
+<body>
+	<div class="settings">
+		<h3>Hilbert curve</h3>
+		Iterations: <input id="iterInput" type="number" min="1" max="10" step="1" value="5">
+		Line width: <input id="lineWidthInput" type="number" min="1" step="1" value="2">
+	</div>
+	<script>
+		const turtleGraphics = () => {
+			const width = window.innerWidth;
+			const height = window.innerHeight;
+			const canvas = document.createElement('canvas');
+			canvas.width = width;
+			canvas.height = height;
+			document.body.appendChild(canvas);
+			document.body.style.margin = 0;
+			document.body.style.overflow = 'hidden';
+
+			const ctx = canvas.getContext('2d');
+
+			const toRad = Math.PI / 180;
+
+			ctx.fillRect(0, 0, width, height);
+			ctx.strokeStyle = '#ffffff';
+			ctx.lineCap = 'round';
+
+			const turtle = {
+				x: 0,
+				y: 0,
+				angle: 0,
+				ctx,
+				setPos: (x, y) => {
+					turtle.x = x;
+					turtle.y = y;
+				},
+				move: (distance) => {
+					ctx.beginPath();
+					ctx.moveTo(turtle.x, turtle.y);
+					turtle.x += Math.cos(turtle.angle * toRad) * distance;
+					turtle.y += Math.sin(turtle.angle * toRad) * distance;
+					ctx.lineTo(turtle.x, turtle.y);
+					ctx.stroke();
+				},
+				setColor: (color) => {
+					ctx.strokeStyle = color;
+				},
+				setLineWidth: (width) => {
+					ctx.lineWidth = width;
+				},
+				turn: (angle) => {
+					turtle.angle += angle;
+				}
+			};
+
+			return turtle;
+		};
+
+		let iters = 5;
+		let lineWidth = 2;
+		const turtle = turtleGraphics();
+
+		const draw = () => {
+			turtle.ctx.clearRect(0, 0, window.innerWidth, window.innerHeight);
+			turtle.setPos(50, 10);
+			turtle.setLineWidth(lineWidth);
+			turtle.setColor(`hsl(0, 100%, 50%)`);
+
+			const size = Math.min(window.innerWidth, window.innerHeight) - 100;
+			const order = iters;
+			const dist = size / (2**order - 1);
+			const colorDelta = 360 / (4**order-1);
+			let color = 0;
+
+			const move = () => {
+				turtle.move(dist);
+				turtle.setColor(`hsl(${color}, 100%, 50%)`);
+				color += colorDelta;
+			};
+
+			const hilbert = (depth, angleMult = -1) => {
+				if (depth === 0) {
+					return;
+				}
+				turtle.angle += -angleMult * 90;
+				hilbert(depth - 1, -angleMult);
+				move(dist);
+				turtle.angle += angleMult * 90;
+				hilbert(depth - 1, angleMult);
+				move(dist);
+				hilbert(depth - 1, angleMult);
+				turtle.angle += angleMult * 90;
+				move(dist);
+				hilbert(depth - 1, -angleMult);
+				turtle.angle += -angleMult * 90;
+			};
+
+			turtle.angle = 0;
+			hilbert(order);
+		};
+
+		const iterInput = document.querySelector('#iterInput');
+		const lineWidthInput = document.querySelector('#lineWidthInput');
+
+		const inputOnChange = (e) => {
+			let val = Math.max(Math.floor(parseFloat(e.target.value)), 1);
+			val = Number.isNaN(val) ? 2 : val;
+			if (e.currentTarget === iterInput) {
+				iters = val;
+			} else if (e.currentTarget === lineWidthInput) {
+				lineWidth = val;
+			}
+			draw();
+		};
+
+		iterInput.addEventListener('input', inputOnChange);
+		lineWidthInput.addEventListener('input', inputOnChange);
+
+		draw();
+	</script>
+</body>
+</html>

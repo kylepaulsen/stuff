@@ -95,8 +95,8 @@
 
 			const move = () => {
 				turtle.move(dist);
-				turtle.setColor(`hsl(${color}, 100%, 50%)`);
 				color += colorDelta;
+				turtle.setColor(`hsl(${color}, 100%, 50%)`);
 			};
 
 			const hilbert = (depth, angleMult = -1) => {

@@ -1,0 +1,215 @@
+<html>
+    <head>
+        <style>
+            html, body { margin: 0; height: 100%; overflow: hidden; }
+            #loadBtn { position: absolute; top: 0; right: 0; cursor: pointer; }
+            .leftSliders { position: absolute; bottom: 0; left: 0; padding: 1rem; }
+            .leftSliders input { width: 40vw; display: block; }
+            .rightSliders { position: absolute; bottom: 0; right: 0; padding: 1rem; }
+            .rightSliders input { width: 40vw; display: block; }
+        </style>
+    </head>
+    <body>
+        <button id="loadBtn">Load Data</button>
+        <div class="leftSliders">
+            <input id="sliceZ" type="range" min="0" max="1" step="0.01" value="1">
+        </div>
+        <div class="rightSliders">
+            <input id="maxFilter" type="range" min="0" max="1" step="0.01" value="1">
+            <input id="minFilter" type="range" min="0" max="1" step="0.01" value="0">
+        </div>
+        <script src="lib/CulledMesh.js"></script>
+        <script type="module">
+            import * as THREE from './lib/three.module.min.js';
+            import { OrbitControls } from './lib/OrbitControls.js';
+
+            const throttle = (fn, delay) => {
+                let timeout = null;
+                return (...args) => {
+                    if (timeout === null) {
+                        fn(...args);
+                        timeout = setTimeout(() => {
+                            timeout = null;
+                        }, delay);
+                    }
+                };
+            };
+
+            const scene = new THREE.Scene();
+            const camera = new THREE.PerspectiveCamera(75, window.innerWidth / window.innerHeight, 0.1, 1000);
+            camera.position.z = 100;
+
+            const renderer = new THREE.WebGLRenderer();
+            renderer.setSize(window.innerWidth, window.innerHeight);
+            document.body.appendChild(renderer.domElement);
+
+            scene.add(new THREE.HemisphereLight( 0xffffbb, 0x080820, 1 ));
+            scene.add(new THREE.AmbientLight( 0x404040, 0.5 ));
+            // directional light
+            const directionalLight = new THREE.DirectionalLight(0xffffff, 0.5);
+            directionalLight.position.set(1, 0.9, 0.8);
+            scene.add(directionalLight);
+
+            const controls = new OrbitControls(camera, renderer.domElement);
+
+            const ui = {};
+            document.querySelectorAll('[id]').forEach(e => ui[e.id] = e);
+
+            let rhoFile;
+            let currentMesh;
+
+            const floatToRGB = (f) => [
+                Math.sin(4 * f + 0) * 0.5 + 0.5,
+                Math.sin(4 * f + 2) * 0.5 + 0.5,
+                Math.sin(4 * f + 4) * 0.5 + 0.5
+            ];
+
+            const buildMesh = (config = {}) => {
+                console.log(config);
+                console.time("build mesh");
+                const geometry = new THREE.BufferGeometry();
+
+                const zDim = Math.floor(rhoFile.cellDims[2] * (config.sliceZ ?? 1));
+                const zStart = rhoFile.cellDims[2] - zDim;
+                const maxF = parseFloat(config.maxFilter);
+                const minF = parseFloat(config.minFilter);
+                const cells = rhoFile.cells.slice(zStart * rhoFile.cellDims[0] * rhoFile.cellDims[1]).map(x =>
+                    (x > maxF || x < minF ? 0 : x));
+
+                const mesh = CulledMesh(cells, [rhoFile.cellDims[0], rhoFile.cellDims[1], zDim]);
+                const verts = [];
+                const colors = [];
+                for (let i = 0; i < mesh.faces.length; ++i) {
+                    const face = mesh.faces[i];
+
+                    const vert1 = mesh.vertices[face[0]];
+                    verts.push(vert1[0], vert1[1], vert1[2]);
+                    const vert2 = mesh.vertices[face[1]];
+                    verts.push(vert2[0], vert2[1], vert2[2]);
+                    const vert3 = mesh.vertices[face[2]];
+                    verts.push(vert3[0], vert3[1], vert3[2]);
+                    const vert4 = mesh.vertices[face[3]];
+                    verts.push(vert1[0], vert1[1], vert1[2]);
+                    verts.push(vert3[0], vert3[1], vert3[2]);
+                    verts.push(vert4[0], vert4[1], vert4[2]);
+
+                    const normalizedValue = (face[4] - rhoFile.min) / (rhoFile.max - rhoFile.min);
+                    const faceColor = floatToRGB(normalizedValue);
+                    colors.push(
+                        faceColor[0], faceColor[1], faceColor[2],
+                        faceColor[0], faceColor[1], faceColor[2],
+                        faceColor[0], faceColor[1], faceColor[2],
+                        faceColor[0], faceColor[1], faceColor[2],
+                        faceColor[0], faceColor[1], faceColor[2],
+                        faceColor[0], faceColor[1], faceColor[2],
+                    );
+                }
+
+                geometry.setAttribute('position', new THREE.BufferAttribute(new Float32Array(verts), 3));
+                geometry.setAttribute('color', new THREE.BufferAttribute(new Float32Array(colors), 3));
+
+                geometry.computeVertexNormals();
+
+                const material = new THREE.MeshLambertMaterial({
+                    vertexColors: true,
+                });
+                const surfaceMesh = new THREE.Mesh(geometry, material);
+
+                console.timeEnd("build mesh");
+                return surfaceMesh;
+            };
+
+            const animate = () => {
+                controls.update();
+                renderer.render(scene, camera);
+                requestAnimationFrame(animate);
+            };
+
+            const parseRHOFile = (text) => {
+                const lines = text.split('\n');
+                const fileData = { cells: [], min: Infinity, max: -Infinity };
+                lines.forEach(rawLine => {
+                    const line = rawLine.trim();
+                    if (line.startsWith('#') || line === '') {
+                        return;
+                    }
+                    if (!fileData.cellDims) {
+                        const lineValues = line.split(/\s+/);
+                        fileData.cellDims = [parseFloat(lineValues[0]), parseFloat(lineValues[1]), parseFloat(lineValues[2]), parseFloat(lineValues[3])];
+                        fileData.valueType = lineValues[4];
+                        fileData.cellCount = fileData.cellDims[0] * fileData.cellDims[1] * fileData.cellDims[2];
+                        return;
+                    }
+                    if (!fileData.cellWidths) {
+                        fileData.cellWidths = line.split(/\s+/).map((x) => parseFloat(x));
+                        return;
+                    }
+                    if (!fileData.cellDepths) {
+                        fileData.cellDepths = line.split(/\s+/).map((x) => parseFloat(x));
+                        return;
+                    }
+                    if (!fileData.cellHeights) {
+                        fileData.cellHeights = line.split(/\s+/).map((x) => parseFloat(x));
+                        return;
+                    }
+                    if (fileData.cells.length < fileData.cellCount) {
+                        const lineValues = line.split(/\s+/).forEach(x => {
+                            const val = parseFloat(x);
+                            fileData.cells.push(val);
+                            fileData.min = Math.min(fileData.min, val);
+                            fileData.max = Math.max(fileData.max, val);
+                        });
+                    }
+                });
+                return fileData;
+            };
+
+            const resetScene = (config) => {
+                currentMesh = buildMesh(config);
+                window.mesh = currentMesh;
+                const boundingBox = new THREE.Box3().setFromObject(currentMesh);
+                // rotate mesh
+                currentMesh.rotation.x = Math.PI * 0.5;
+
+                currentMesh.position.x = -boundingBox.max.x * 0.5;
+                currentMesh.position.y = boundingBox.max.z * 0.5;
+                currentMesh.position.z = -boundingBox.max.y * 0.5;
+
+                scene.add(currentMesh);
+            };
+
+            ui.loadBtn.addEventListener('click', () => {
+                const fileInput = document.createElement('input');
+                fileInput.type = 'file';
+                fileInput.addEventListener('change', () => {
+                    // load text data from file
+                    const reader = new FileReader();
+                    reader.onload = (e) => {
+                        rhoFile = parseRHOFile(e.target.result);
+                        ui.maxFilter.max = rhoFile.max + 0.1;
+                        ui.maxFilter.min = rhoFile.min - 0.1;
+                        ui.maxFilter.value = rhoFile.max + 0.1;
+                        ui.minFilter.max = rhoFile.max + 0.1;
+                        ui.minFilter.min = rhoFile.min - 0.1;
+                        ui.minFilter.value = rhoFile.min - 0.1;
+                        resetScene({ sliceZ: 1, maxFilter: ui.maxFilter.value, minFilter: ui.minFilter.value });
+                    }
+                    reader.readAsText(fileInput.files[0]);
+                });
+                fileInput.click();
+            });
+
+            const redraw = throttle(() => {
+                currentMesh.geometry.dispose();
+                currentMesh.material.dispose();
+                scene.remove(currentMesh);
+                resetScene({ sliceZ: ui.sliceZ.value, maxFilter: ui.maxFilter.value, minFilter: ui.minFilter.value });
+            }, 100);
+            ui.sliceZ.addEventListener('input', redraw);
+            ui.maxFilter.addEventListener('input', redraw);
+            ui.minFilter.addEventListener('input', redraw);
+
+            animate();
+        </script>
+    </body>
+</html>

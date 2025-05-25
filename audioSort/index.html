@@ -9,6 +9,11 @@
     This will split audio into 'chunks' and sort them by loudness.<br><br>
     First set a chunk size:<br>
     Chunk size (in seconds): <input id='chunk' value='0.125'><br><br>
+    <input type="radio" id="sortDirAscRadio" name="sortDir" value="asc" checked />
+    <label for="sortDirAscRadio">Ascending</label>
+    <input type="radio" id="sortDirDescRadio" name="sortDir" value="desc" />
+    <label for="sortDirDescRadio">Descending</label>
+    <br><br>
     Now choose a file:<br>
     <input type='file' id='file'> OR <button id="rec" style="width: 200px;">Record from your microphone</button><br><br>
     <button id='play'>Play Again</button><br><br>
@@ -20,6 +25,7 @@
     <script src="lib/recorder.js"></script>
     <script src="lib/audiobuffer-to-wav.js"></script>
     <script>
+        /* globals Recorder */
         // hack to get this commonjs module.
         const bufferToWav = module.exports;
 
@@ -48,6 +54,7 @@
             // }
 
             // sort sections by loudness
+            const sortDir = $('input[name="sortDir"]:checked').value;
             let chunkSize = parseFloat($('#chunk').value);
             if (isNaN(chunkSize) || chunkSize <= 0) {
                 alert('invalid chunk size, setting to 0.25');
@@ -75,6 +82,9 @@
                 x += frameSize;
             }
             frames.sort(function(a, b) {
+                if (sortDir === 'asc') {
+                    return a.loudness - b.loudness;
+                }
                 return b.loudness - a.loudness;
             });
             const newBuffer = new Float32Array(len);
@@ -96,7 +106,7 @@
             let rightChannelData;
             try {
                 rightChannelData = buffer.getChannelData(1);
-            } catch(e) {}
+            } catch {}
 
             changePCM(leftChannelData);
             if (rightChannelData) {
@@ -161,7 +171,7 @@
                 rec.getBuffer(function(buffers) {
                     play = function() {
                         sampleRate = ctx.sampleRate;
-                        var newBuffer = ctx.createBuffer(buffers.length, buffers[0].length, ctx.sampleRate);
+                        const newBuffer = ctx.createBuffer(buffers.length, buffers[0].length, ctx.sampleRate);
                         for (let x = 0; x < buffers.length; x++) {
                             newBuffer.getChannelData(x).set(buffers[x]);
                         }

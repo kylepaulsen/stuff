@@ -1,0 +1,96 @@
+<!DOCTYPE html>
+<html>
+<head>
+	<title>Workout Timer</title>
+	<meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=no">
+	<link rel="manifest" href="manifest.webmanifest" />
+	<link rel="stylesheet" href="water-dark.min.css">
+	<link rel="stylesheet" href="styles.css">
+</head>
+<body>
+	<h1>Workout Timer</h1>
+
+	<section class="spaced-flex">
+		<h2 data-id="workoutName" class="workout-name">7 Minute Workout</h2>
+		<div data-id="settingsBtn" class="settings-btn" role="button">⚙️</div>
+	</section>
+
+	<section>
+		<div data-id="exercises" class="exercises" contenteditable="true" role="textbox" aria-multiline="true"></div>
+		<div class="spaced-flex">
+			<div class="flex">
+				<button data-id="addRestBtn" class="auto">Add Rest</button>
+				<input data-id="secondsInput" type="number" min="0" value="10">
+			</div>
+			<div>Duration: <span data-id="duration"></span></div>
+		</div>
+	</section>
+
+	<button data-id="startWorkoutBtn" class="large">Start Workout</button>
+
+	<dialog data-id="workoutDialog" data-noclose>
+		<div class="vflex" style="height: 100%;">
+			<div class="workoutDialogTop">
+				<div data-id="currentExerciseName"></div>
+			</div>
+			<div class="workoutDialogMiddle">
+				<div data-id="currentExerciseTime"></div>
+			</div>
+			<div class="workoutDialogBottom">
+				<button data-id="stopWorkoutBtn" class="auto">Stop</button>
+				<button data-id="pauseWorkoutBtn" class="auto">Pause</button>
+			</div>
+		</div>
+		<div class="screen-off-btn" role="button" data-id="screenOffBtn">Screen Off</div>
+	</dialog>
+
+	<dialog data-id="settingsDialog">
+		<h2>Settings</h2>
+		<div class="flex" data-id="settingsTabs">
+			<div role="button" class="tab active" data-tab="saveLoadTab">Save / Load</div>
+			<div role="button" class="tab" data-tab="voiceTab">Voice</div>
+		</div>
+		<div class="tab-content active" data-id="saveLoadTab">
+			<section>
+				<h3>Save Workout</h3>
+				<div class="row">
+					<div>Name:</div>
+					<div class="flex">
+						<div class="flex1">
+							<div>
+								<input type="text" data-id="workoutNameInput" placeholder="Name your workout">
+							</div>
+						</div>
+						<button data-id="saveWorkoutBtn" class="small">Save</button>
+					</div>
+					<div class="warning" data-id="saveWorkoutWarning"></div>
+				</div>
+			</section>
+			<section>
+				<h3>Load Workout</h3>
+				<div class="row">Click a workout to load</div>
+				<div data-id="savedWorkouts"></div>
+			</section>
+		</div>
+		<div class="tab-content" data-id="voiceTab">
+			<div class="row">
+				<div>Voice:</div>
+				<div class="voice"><select data-id="voiceSelect"></select></div>
+			</div>
+		</div>
+		<div class="btn-row">
+			<button data-id="closeSettingsDialogBtn">Close</button>
+		</div>
+	</dialog>
+
+	<video id="screenLockVid" data-id="screenLockVid" width="1" loop muted playsinline>
+		<source
+			src="data:video/webm;base64,GkXfo0AgQoaBAUL3gQFC8oEEQvOBCEKCQAR3ZWJtQoeBAkKFgQIYU4BnQI0VSalmQCgq17FAAw9CQE2AQAZ3aGFtbXlXQUAGd2hhbW15RIlACECPQAAAAAAAFlSua0AxrkAu14EBY8WBAZyBACK1nEADdW5khkAFVl9WUDglhohAA1ZQOIOBAeBABrCBCLqBCB9DtnVAIueBAKNAHIEAAIAwAQCdASoIAAgAAUAmJaQAA3AA/vz0AAA="
+			type="video/webm">
+	</video>
+
+	<div class="blackOverlay" data-id="blackOverlay"></div>
+
+	<script src="main.js" type="module"></script>
+</body>
+</html>

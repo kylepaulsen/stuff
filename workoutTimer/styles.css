@@ -1,0 +1,261 @@
+:root {
+	--rest-color: #999;
+}
+
+* {
+	box-sizing: border-box;
+}
+
+[role="textbox"] {
+	background: var(--background);
+	color: var(--form-text);
+	margin-bottom: 6px;
+	padding: 10px;
+	border: none;
+	border-radius: 6px;
+	outline: none;
+}
+
+[role="button"] {
+	cursor: pointer;
+}
+
+.flex {
+	display: flex;
+}
+
+.vflex {
+	display: flex;
+	flex-direction: column;
+}
+
+.flex1 {
+	flex: 1 1 0;
+	min-width: 0;
+}
+
+.gap {
+	gap: 12px;
+}
+
+.row {
+	width: 100%;
+	margin-bottom: 8px;
+}
+
+.ellipsis {
+	white-space: nowrap;
+	overflow: hidden;
+	text-overflow: ellipsis;
+}
+
+h2 {
+	margin: 12px 0;
+}
+
+input {
+	width: 100%;
+}
+
+input[type="number"] {
+	width: 68px;
+}
+
+section {
+	margin-bottom: 12px;
+}
+
+button {
+	width: 200px;
+	cursor: pointer;
+
+	&.auto {
+		width: auto;
+		padding: 10px 14px;
+	}
+
+	&.small {
+		width: 100px;
+		padding: 10px 14px;
+	}
+
+	&.large {
+		width: 100%;
+		padding: 16px 10px;
+		font-size: 24px;
+	}
+
+	&[disabled] {
+		pointer-events: none;
+	}
+}
+
+dialog {
+	width: 90vw;
+	max-width: 800px;
+	padding: 10px 16px;
+	outline: 0;
+	/* Make our own backdrop with box-shadow */
+	box-shadow: 0 0 0 100vmax rgba(0, 0, 0, 0.5);
+
+	&::backdrop {
+		display: none;
+	}
+
+	& .btn-row {
+		display: flex;
+		justify-content: flex-end;
+		margin-top: 20px;
+	}
+}
+
+.spaced-flex {
+	display: flex;
+	justify-content: space-between;
+	align-items: center;
+}
+
+/***** More specific styles *****/
+
+.workout-name {
+	margin: 0;
+}
+
+.settings-btn {
+	font-size: 24px;
+}
+
+.exercises {
+	position: relative;
+	padding: 34px 10px 10px 10px;
+
+	&::after {
+		content: "Exercise, Seconds";
+		position: absolute;
+		top: 4px;
+		left: 10px;
+		color: var(--rest-color);
+		width: calc(100% - 20px);
+		border-bottom: 1px solid #999;
+	}
+}
+
+.exercise {
+	color: var(--form-text);
+	font-weight: bold;
+}
+
+.rest {
+	color: var(--rest-color);
+	font-weight: normal;
+}
+
+.tab {
+	padding: 12px;
+	background: var(--background-alt);
+	color: var(--form-text);
+	margin-right: 16px;
+	border-radius: 12px 12px 0 0;
+
+	&.active {
+		font-weight: bold;
+		background: var(--background);
+	}
+}
+
+.tab-content {
+	display: none;
+	background: var(--background);
+	padding: 16px;
+	max-height: 72svh;
+	overflow: auto;
+
+	&.active {
+		display: block;
+	}
+
+	& select, & input {
+		/* background: var(--background-alt); */
+		border: 1px solid var(--form-text);
+	}
+}
+
+.voice select {
+	width: 100%;
+}
+
+.warning {
+	color: #ee4;
+}
+
+.deleteSure {
+	color: #e44;
+}
+
+.workoutDialogTop {
+	flex: 0 0 20%;
+	display: flex;
+	flex-direction: column;
+	justify-content: center;
+	text-align: center;
+	align-items: center;
+	font-size: 16px;
+	padding-top: 20px;
+}
+
+.workoutDialogMiddle {
+	display: flex;
+	justify-content: center;
+	align-items: center;
+	font-size: 160px;
+	flex: 1 1 70%;
+}
+
+.workoutDialogBottom {
+	display: flex;
+	gap: 12px;
+	text-align: center;
+	flex: 0 0 15%;
+	padding-bottom: 20px;
+
+	& button {
+		flex: 1 0 0;
+	}
+}
+
+.stop-workout-btn {
+	position: absolute;
+	bottom: 0px;
+	right: 0px;
+	padding: 20px;
+}
+
+.screen-off-btn {
+	position: fixed;
+	bottom: 30px;
+	left: 50%;
+	transform: translateX(-50%);
+	z-index: 100;
+	color: var(--form-text);
+	padding: 10px 20px;
+	border: none;
+}
+
+.blackOverlay {
+	display: none;
+	position: fixed;
+	top: 0;
+	left: 0;
+	right: 0;
+	bottom: 0;
+	background: #000;
+	z-index: 9999;
+}
+
+#screenLockVid {
+	display: none;
+	position: fixed;
+	left: 0px;
+	top: 0px;
+	opacity: 0;
+}

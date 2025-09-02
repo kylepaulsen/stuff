@@ -1,0 +1,16 @@
+{
+    "background_color": "#202b38",
+    "theme_color": "#0c151c",
+    "description": "A super flexible workout timer.",
+    "display": "standalone",
+    "icons": [
+        {
+            "src": "icon.svg",
+            "sizes": "any",
+            "type": "image/svg+xml"
+        }
+    ],
+    "name": "Workout Timer",
+    "short_name": "Workout Timer",
+    "start_url": "index.html"
+}

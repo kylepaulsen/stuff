@@ -42,7 +42,6 @@ export const parseExercises = (str) => {
 const checkForNestedElements = () => ([]).find.call(ui.exercises.children, el => el.children.length > 0);
 
 export const setExercises = (exercises) => {
-	console.log('rerendering exercises');
 	ui.exercises.innerHTML = '';
 	exercises.forEach(e => {
 		const div = document.createElement('div');

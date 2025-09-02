@@ -239,6 +239,17 @@ dialog {
 	color: var(--form-text);
 	padding: 10px 20px;
 	border: none;
+	background: #000;
+	border-radius: 6px;
+}
+
+@media (max-height: 500px) {
+	.screen-off-btn {
+		left: 30px;
+		bottom: auto;
+		top: 30px;
+		transform: translateX(0);
+	}
 }
 
 .blackOverlay {

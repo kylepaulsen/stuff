@@ -1,8 +1,18 @@
 import { ui, safeParseInt, appStorage, debounce } from './utils.js';
 
-const updateDuration = (numSeconds) => {
-	const min = Math.floor(numSeconds / 60);
-	let sec = (numSeconds - min * 60) + '';
+const updateDuration = () => {
+	const text = ui.exercises.innerText.trim();
+	const lines = text.split('\n');
+	let seconds = 0;
+	lines.forEach(l => {
+		const eParts = l.split(',');
+		if (eParts.length > 1) {
+			const last = eParts.pop();
+			seconds += Math.max(safeParseInt(last.trim(), 30), 0);
+		}
+	});
+	const min = Math.floor(seconds / 60);
+	let sec = (seconds - min * 60) + '';
 	if (sec.length === 1) {
 		sec = '0' + sec;
 	}
@@ -29,35 +39,33 @@ export const parseExercises = (str) => {
 	return exercises;
 };
 
+const checkForNestedElements = () => ([]).find.call(ui.exercises.children, el => el.children.length > 0);
+
 export const setExercises = (exercises) => {
+	console.log('rerendering exercises');
 	ui.exercises.innerHTML = '';
-	let numSeconds = 0;
 	exercises.forEach(e => {
 		const div = document.createElement('div');
 		div.classList.add('exercise');
 		div.textContent = `${e.name}, ${e.seconds}`;
-		numSeconds += e.seconds;
 		if (e.name.toLowerCase() === 'rest') {
 			div.classList.add('rest');
 		}
 		ui.exercises.appendChild(div);
 	});
-	updateDuration(numSeconds);
+	updateDuration();
 };
 
 const makeTextRich = () => {
-	let numSeconds = 0;
 	for (let n of ui.exercises.children) {
 		const textContent = n.textContent.toLowerCase();
-		const textContentParts = textContent.split(',');
 		if (textContent.includes('rest')) {
 			n.className = 'rest';
 		} else {
 			n.className = 'exercise';
 		}
-		numSeconds += safeParseInt(textContentParts[1], 0);
 	}
-	updateDuration(numSeconds);
+	updateDuration();
 };
 
 const addRest = () => {
@@ -86,25 +94,31 @@ const addRest = () => {
 };
 
 ui.addRestBtn.addEventListener('click', () => {
-    addRest();
-    appStorage.lastWorkout = ui.exercises.innerText;
+	addRest();
+	appStorage.lastWorkout = ui.exercises.innerText;
 });
 
 ui.exercises.addEventListener('keyup', () => {
-    for (let n of ui.exercises.childNodes) {
-        if (n.nodeName === '#text') {
-            const textDiv = document.createElement('div');
-            textDiv.textContent = n.textContent;
-            ui.exercises.insertBefore(textDiv, n);
-            n.remove();
-        }
-    }
-    if (ui.exercises.innerText.trim().length === 0) {
-        ui.exercises.innerHTML = '<div><br></div>';
-    }
+	for (let n of ui.exercises.childNodes) {
+		if (n.nodeName === '#text') {
+			const textDiv = document.createElement('div');
+			textDiv.textContent = n.textContent;
+			ui.exercises.insertBefore(textDiv, n);
+			n.remove();
+		}
+	}
+	if (ui.exercises.innerText.trim().length === 0) {
+		ui.exercises.innerHTML = '<div><br></div>';
+	}
 });
 
 ui.exercises.addEventListener('keyup', debounce(() => {
-    makeTextRich();
-    appStorage.lastWorkout = ui.exercises.innerText;
+	makeTextRich();
+	appStorage.lastWorkout = ui.exercises.innerText;
 }, 100));
+
+ui.exercises.addEventListener('blur', () => {
+	if (checkForNestedElements()) {
+		setExercises(parseExercises());
+	}
+});

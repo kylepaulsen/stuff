@@ -43,5 +43,3 @@ export const say = (msg, speed, mute) => {
 	}
 	window.speechSynthesis.speak(speakIt);
 };
-
-window.say = say;

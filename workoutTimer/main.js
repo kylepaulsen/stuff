@@ -188,8 +188,8 @@ ui.pauseWorkoutBtn.addEventListener('click', () => {
 });
 
 ui.screenOffBtn.addEventListener('click', () => {
-	ui.workoutDialog.close();
 	ui.blackOverlay.style.display = 'block';
+	ui.workoutDialog.close();
 	ui.blackOverlay.requestFullscreen();
 });
 
@@ -200,7 +200,7 @@ ui.blackOverlay.addEventListener('click', () => {
 });
 
 const workoutDialogObserver = new MutationObserver(() => {
-	if (!ui.workoutDialog.open) {
+	if (!ui.workoutDialog.open && ui.blackOverlay.style.display !== 'block') {
 		// if the browser forces the workout dialog to close, stop the workout
 		stopWorkout();
 	}

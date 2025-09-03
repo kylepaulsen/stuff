@@ -5,80 +5,80 @@ import { say } from './textToSpeech.js';
 const allSavedWorkouts = appStorage.savedWorkouts || [];
 
 const defaultWorkoutStr = `
-    Jumping Jacks, 30
-    Rest, 10
-    Wall Sit, 30
-    Rest, 10
-    Push ups, 30
-    Rest, 10
-    Crunches, 30
-    Rest, 10
-    Step ups, 30
-    Rest, 10
-    Squats, 30
-    Rest, 10
-    Triceps Dips, 30
-    Rest, 10
-    Plank, 30
-    Rest, 10
-    High Knees Running In Place, 30
-    Rest, 10
-    Lunge, 30
-    Rest, 10
-    Push up and Rotation, 30
-    Rest, 10
-    Side Plank, 30
+	Jumping Jacks, 30
+	Rest, 10
+	Wall Sit, 30
+	Rest, 10
+	Push ups, 30
+	Rest, 10
+	Crunches, 30
+	Rest, 10
+	Step ups, 30
+	Rest, 10
+	Squats, 30
+	Rest, 10
+	Triceps Dips, 30
+	Rest, 10
+	Plank, 30
+	Rest, 10
+	High Knees Running In Place, 30
+	Rest, 10
+	Lunge, 30
+	Rest, 10
+	Push up and Rotation, 30
+	Rest, 10
+	Side Plank, 30
 `.trim().split('\n').map(e => e.trim()).join('\n');
 
 const defaultWorkout = { name: '7 Minute Workout', exercises: parseExercises(defaultWorkoutStr), default: true };
 
 const populateSavedWorkouts = () => {
-    ui.savedWorkouts.innerHTML = '';
-    const savedWorkoutTemplate = `
-        <div class="flex gap row">
-            <div class="flex1">
-                <button class="savedWorkoutName row ellipsis"></button>
-            </div>
-            <button class="deleteWorkoutBtn auto">Delete</button>
-        </div>
-    `;
-    const createWorkoutBtns = (workout, idx) => {
-        const tempDiv = document.createElement('div');
-        tempDiv.innerHTML = savedWorkoutTemplate;
-        const savedWorkoutEl = tempDiv.children[0];
-        const saveWorkoutBtn = savedWorkoutEl.querySelector('.savedWorkoutName');
-        saveWorkoutBtn.textContent = workout.name;
-        if (idx === undefined) {
-            saveWorkoutBtn.dataset.workoutId = 'default';
-            savedWorkoutEl.querySelector('.deleteWorkoutBtn').remove();
-        } else {
-            savedWorkoutEl.dataset.workoutId = idx;
-            saveWorkoutBtn.dataset.workoutId = idx;
-        }
-        ui.savedWorkouts.appendChild(savedWorkoutEl);
-    };
-    allSavedWorkouts.forEach(createWorkoutBtns);
-    createWorkoutBtns(defaultWorkout);
+	ui.savedWorkouts.innerHTML = '';
+	const savedWorkoutTemplate = `
+		<div class="flex gap row">
+			<div class="flex1">
+				<button class="savedWorkoutName row ellipsis"></button>
+			</div>
+			<button class="deleteWorkoutBtn auto">Delete</button>
+		</div>
+	`;
+	const createWorkoutBtns = (workout, idx) => {
+		const tempDiv = document.createElement('div');
+		tempDiv.innerHTML = savedWorkoutTemplate;
+		const savedWorkoutEl = tempDiv.children[0];
+		const saveWorkoutBtn = savedWorkoutEl.querySelector('.savedWorkoutName');
+		saveWorkoutBtn.textContent = workout.name;
+		if (idx === undefined) {
+			saveWorkoutBtn.dataset.workoutId = 'default';
+			savedWorkoutEl.querySelector('.deleteWorkoutBtn').remove();
+		} else {
+			savedWorkoutEl.dataset.workoutId = idx;
+			saveWorkoutBtn.dataset.workoutId = idx;
+		}
+		ui.savedWorkouts.appendChild(savedWorkoutEl);
+	};
+	allSavedWorkouts.forEach(createWorkoutBtns);
+	createWorkoutBtns(defaultWorkout);
 };
 populateSavedWorkouts();
 
 const saveWorkouts = () => {
-    appStorage.savedWorkouts = allSavedWorkouts;
-    populateSavedWorkouts();
+	appStorage.savedWorkouts = allSavedWorkouts;
+	populateSavedWorkouts();
 };
 
 const saveWorkout = (name) => {
-    const exercises = parseExercises();
-    if (exercises.length && name) {
-        allSavedWorkouts.unshift({
-            name,
-            exercises
-        });
+	const exercises = parseExercises();
+	if (exercises.length && name) {
+		allSavedWorkouts.unshift({
+			name,
+			exercises
+		});
 
-        ui.workoutName.textContent = name;
-        appStorage.lastWorkoutName = name;
-        saveWorkouts();
-    }
+		ui.workoutName.textContent = name;
+		appStorage.lastWorkoutName = name;
+		saveWorkouts();
+	}
 };
 
 const loadWorkout = (id) => {
@@ -93,38 +93,38 @@ const loadWorkout = (id) => {
 setExercises(parseExercises(appStorage.lastWorkout || defaultWorkoutStr));
 
 ui.savedWorkouts.addEventListener('click', (e) => {
-    const target = e.target;
-    if (target.classList.contains('deleteWorkoutBtn')) {
-        const lastDeleteSure = ui.savedWorkouts.querySelector('.deleteSure');
-        if (target.classList.contains('deleteSure')) {
-            const id = parseInt(target.parentNode.dataset.workoutId);
-            allSavedWorkouts.splice(id, 1);
-            saveWorkouts();
-        } else {
-            target.classList.add('deleteSure');
-            target.textContent = 'You sure?';
-            target.disabled = true;
-            setTimeout(() => {
-                target.disabled = false;
-            }, 500);
-        }
-        if (lastDeleteSure) {
-            lastDeleteSure.classList.remove('deleteSure');
-            lastDeleteSure.textContent = 'Delete';
-        }
-    } else if (target.classList.contains('savedWorkoutName')) {
-        if (target.dataset.workoutId === 'default') {
-            loadWorkout();
-        } else {
-            const id = parseInt(target.dataset.workoutId);
-            loadWorkout(id);
-        }
-    }
+	const target = e.target;
+	if (target.classList.contains('deleteWorkoutBtn')) {
+		const lastDeleteSure = ui.savedWorkouts.querySelector('.deleteSure');
+		if (target.classList.contains('deleteSure')) {
+			const id = parseInt(target.parentNode.dataset.workoutId);
+			allSavedWorkouts.splice(id, 1);
+			saveWorkouts();
+		} else {
+			target.classList.add('deleteSure');
+			target.textContent = 'You sure?';
+			target.disabled = true;
+			setTimeout(() => {
+				target.disabled = false;
+			}, 500);
+		}
+		if (lastDeleteSure) {
+			lastDeleteSure.classList.remove('deleteSure');
+			lastDeleteSure.textContent = 'Delete';
+		}
+	} else if (target.classList.contains('savedWorkoutName')) {
+		if (target.dataset.workoutId === 'default') {
+			loadWorkout();
+		} else {
+			const id = parseInt(target.dataset.workoutId);
+			loadWorkout(id);
+		}
+	}
 });
 
 ui.settingsBtn.addEventListener('click', () => {
-	// activeDialog = ui.settingsDialog;
 	ui.settingsDialog.showModal();
+	document.activeElement?.blur();
 });
 
 ui.closeSettingsDialogBtn.addEventListener('click', () => {

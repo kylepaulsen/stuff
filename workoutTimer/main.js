@@ -3,12 +3,6 @@ import { primeSpeechSynthesis, say } from './textToSpeech.js';
 import { parseExercises } from './workoutEditor.js';
 import "./settings.js";
 
-navigator.serviceWorker.register("sw.js").then(() => {
-	console.log("Service Worker Registered");
-}).catch((error) => {
-	console.error("Service Worker Registration Failed", error);
-});
-
 let wakeLock;
 let exercises = [];
 let currentExerciseIdx = 0;
@@ -205,4 +199,26 @@ ui.blackOverlay.addEventListener('click', () => {
 	ui.workoutDialog.showModal();
 });
 
+const workoutDialogObserver = new MutationObserver(() => {
+	if (!ui.workoutDialog.open) {
+		// if the browser forces the workout dialog to close, stop the workout
+		stopWorkout();
+	}
+});
+workoutDialogObserver.observe(ui.workoutDialog, { attributes: true, attributeFilter: ['open'] });
+
+ui.workoutDialog.addEventListener('cancel', (e) => {
+	// prevent accidental closing of the workout dialog
+	// this may only work once, as browsers don't let you lock the user.
+	e.preventDefault();
+});
+
 ui.workoutName.textContent = appStorage.lastWorkoutName || '7 Minute Workout';
+
+window.addEventListener('load', () => {
+	navigator.serviceWorker?.register("sw.js").then(() => {
+		console.log("Service Worker Registered");
+	}).catch((error) => {
+		console.error("Service Worker Registration Failed", error);
+	});
+});

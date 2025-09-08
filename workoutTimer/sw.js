@@ -1,6 +1,6 @@
 const appName = "kyles-workout-timer";
 // change app version to trigger an update and recache
-const appVersion = '1.0.2';
+const appVersion = '1.0.3';
 const cacheName = `${appName}_v${appVersion}`;
 
 const filesToCache = [

@@ -135,6 +135,16 @@ const startWorkout = async () => {
 	worker.addEventListener('message', updateTime);
 };
 
+setInterval(async () => {
+	// If the workout is in progress, try to reapply the wake lock in case we lose it.
+	if (ui.workoutDialog.open) {
+		ui.screenLockVid.play();
+		if (wakeLock && wakeLock.released) {
+			wakeLock = await requsetWakeLock();
+		}
+	}
+}, 3000);
+
 const stopWorkout = () => {
 	if (wakeLock) {
 		wakeLock.release();

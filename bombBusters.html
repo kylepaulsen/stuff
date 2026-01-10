@@ -1,0 +1,407 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+	<meta charset="UTF-8" />
+	<meta name="viewport" content="width=device-width, initial-scale=1.0" />
+	<title>Bomb Busters</title>
+
+	<!-- water.css -->
+	<link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/water.css@2/out/water.css">
+
+	<style>
+		input, textarea {
+			width: 100%;
+			box-sizing: border-box;
+
+			&:invalid {
+				outline: 2px solid #d33;
+			}
+		}
+
+		.flex {
+			display: flex;
+			gap: 0.5rem;
+		}
+
+		.center {
+			justify-content: center;
+			align-items: center;
+		}
+
+		.inputRow {
+			display: grid;
+			gap: 0.5rem;
+			align-items: center;
+			grid-template-columns: 250px 1fr;
+
+			input {
+				max-width: 300px;
+				min-width: 50px;
+				justify-self: end;
+			}
+		}
+
+		.toast {
+			position: fixed;
+			bottom: -1rem;
+			left: 50%;
+			transform: translateX(-50%);
+			background: #111;
+			border-radius: 6px;
+			color: #fff;
+			padding: 0.5rem 1rem;
+			z-index: 1;
+			opacity: 0;
+			pointer-events: none;
+			transition: all 400ms cubic-bezier(0.175, 1.885, 0.32, 1.275);
+			&.visible {
+				opacity: 1;
+				bottom: 2rem;
+			}
+		}
+
+		.handGrid {
+			display: grid;
+			grid-template-columns: repeat(auto-fit, minmax(60px, 1fr));
+
+			.tile {
+				position: relative;
+				outline: 1px solid #fff;
+				aspect-ratio: 1;
+				display: flex;
+				justify-content: center;
+				align-items: center;
+				font-size: 1.5rem;
+				cursor: pointer;
+				background: var(--background-body);
+
+				&:hover {
+					filter: brightness(1.2);
+				}
+
+				&.cut {
+					background: #243
+				}
+
+				.columnId {
+					font-size: 0.875rem;
+					position: absolute;
+					top: 0;
+					left: 5px;
+					color: #89f
+				}
+			}
+		}
+
+		.possibleRedYellow {
+			display: flex;
+			gap: 1rem;
+		}
+
+		.backLink {
+			display: none;
+			cursor: pointer;
+		}
+	</style>
+</head>
+<body>
+
+	<div class="flex center" style="margin-bottom: 1rem;">
+		<h1 style="margin:0;">💣 Bomb Busters</h1>
+	</div>
+
+	<section id="formSection">
+		<form id="dealerSettingsForm">
+			<label class="inputRow">
+				Number of players (2-5):
+				<input type="number" id="players" min="2" max="5" value="4">
+			</label>
+
+			<label class="inputRow">
+				Highest blue tile (1-12):
+				<input type="number" id="maxBlue" min="1" max="12" value="12">
+			</label>
+
+			<label class="inputRow">
+				Yellow tiles to draw (0-11):
+				<input type="number" id="yellowDraw" min="0" max="11" value="0">
+			</label>
+
+			<label class="inputRow">
+				Yellow tiles to mix into deck:
+				<input type="number" id="yellowMix" min="0" max="0" value="0">
+			</label>
+
+			<label class="inputRow">
+				Red tiles to draw (0-11):
+				<input type="number" id="redDraw" min="0" max="11" value="0">
+			</label>
+
+			<label class="inputRow">
+				Red tiles to mix into deck:
+				<input type="number" id="redMix" min="0" max="0" value="0">
+			</label>
+
+			<div style="display: flex; justify-content: end;">
+				<button type="submit">Generate & Deal Tiles</button>
+			</div>
+		</form>
+	</section>
+
+	<section id="playerHandSection" style="display: none;">
+		<h2>Your Hands:</h2>
+		<div id="playerHands"></div>
+		<h3>Other possible yellow and red tiles:</h3>
+		<div id="possibleRedYellow" class="possibleRedYellow"></div>
+		<div class="flex" style="justify-content: space-between; align-items: end;">
+			<h3>Notes:</h3>
+			<button role="button" id="clearNotes" style="padding: 4px 14px; margin-right: 0">
+				Clear
+			</button>
+		</div>
+		<textarea id="notes" style="height: 300px;"></textarea>
+		<a href="" class="backLink" id="backLink">← Reset game</a>
+	</section>
+
+	<hr>
+
+	<section id="game" style="display: none;">
+		<h2 id="messageHeader">Player Links</h2>
+		<div id="output"></div>
+	</section>
+
+	<div class="toast" id="toast"></div>
+
+	<script>
+		const ui = {};
+		document.querySelectorAll("[id]").forEach(element => {
+			ui[element.id] = element;
+		});
+
+		let playerHands = [];
+		let currentPlayerData;
+
+		// ---------- Helpers ----------
+
+		const shuffle = (array) => {
+			for (let i = array.length - 1; i > 0; i--) {
+				const j = Math.floor(Math.random() * (i + 1));
+				[array[i], array[j]] = [array[j], array[i]];
+			}
+		};
+
+		const colorizeTile = (tile) => {
+			const span = document.createElement("span");
+			const tileParts = `${tile}`.split(".");
+			const colorNum = tileParts[1];
+			span.textContent = tile;
+			if (colorNum === "5") {
+				span.style.color = "red";
+			} else if (colorNum === "1") {
+				span.style.color = "yellow";
+			}
+			return span;
+		};
+
+		const xen = (t, k) => btoa(String.fromCharCode(...[].map.call(t, (c, i) =>
+			(c.charCodeAt(0) + i % 9) ^ k.charCodeAt(i % k.length)
+		)));
+
+		const xde = (t, k) => [].map.call(atob(t), (c, i) =>
+			String.fromCharCode((c.charCodeAt(0) ^ k.charCodeAt(i % k.length)) - i % 9)
+		).join("");
+
+		const createPlayerLink = (data) => {
+			const linkData = xen(JSON.stringify(data), xen.toString() + xde.toString());
+			return `${location.origin}${location.pathname}?d=${encodeURIComponent(linkData)}`;
+		};
+
+		const decodePlayerLink = (link) => {
+			const linkData = decodeURIComponent(link.split("?d=")[1]);
+			return JSON.parse(xde(linkData, xen.toString() + xde.toString()));
+		};
+
+		let toastTimeout;
+		const showToast = (message) => {
+			ui.toast.textContent = message;
+			ui.toast.classList.add("visible");
+			clearTimeout(toastTimeout);
+			toastTimeout = setTimeout(() => ui.toast.classList.remove("visible"), 2000);
+		};
+
+		const createPlayableHandUI = (hand, options) => {
+			const container = document.createElement("div");
+			container.className = "playableHand";
+			container.innerHTML = `<h3>${options.title}</h3><div class="handGrid"></div>`;
+			const grid = container.querySelector(".handGrid");
+			hand.forEach((tile, idx) => {
+				const tileDiv = document.createElement("div");
+				tileDiv.className = "tile";
+				tileDiv.role = "button";
+				tileDiv.appendChild(colorizeTile(tile));
+				const columnId = document.createElement("div");
+				columnId.className = "columnId";
+				columnId.textContent = String.fromCharCode("A".charCodeAt(0) + idx);
+				tileDiv.appendChild(columnId);
+				tileDiv.addEventListener("click", () => tileDiv.classList.toggle("cut"));
+				grid.appendChild(tileDiv);
+			});
+			return container;
+		};
+
+		if (location.search) {
+			try {
+				currentPlayerData = decodePlayerLink(location.search);
+				ui.formSection.style.display = "none";
+				ui.playerHandSection.style.display = "block";
+				document.querySelector("hr").remove();
+				const allTiles = [];
+				currentPlayerData.h.forEach((hand, idx) => {
+					const handDiv = createPlayableHandUI(hand, { title: `Hand ${idx + 1}` });
+					ui.playerHands.appendChild(handDiv);
+					allTiles.push(...hand);
+				});
+				ui.notes.value = localStorage.notes || "";
+				ui.backLink.href = location.origin + location.pathname;
+				ui.backLink.style.display = "block";
+				[...currentPlayerData.y, ...currentPlayerData.r].forEach(tile => {
+					const tileEl = colorizeTile(tile);
+					if (allTiles.includes(tile)) {
+						tileEl.style.opacity = 0.4;
+					} else {
+						tileEl.style.fontWeight = "bold";
+					}
+					ui.possibleRedYellow.appendChild(tileEl);
+				});
+			} catch {
+				console.error("Failed to decode player link.");
+			}
+		}
+
+		// ---------- Main Logic ----------
+
+		ui.dealerSettingsForm.addEventListener("submit", (e) => {
+			e.preventDefault();
+			const players = Number(ui.players.value);
+			const maxBlue = Number(ui.maxBlue.value);
+			const yellowDraw = Number(ui.yellowDraw.value);
+			const yellowMix = Number(ui.yellowMix.value);
+			const redDraw = Number(ui.redDraw.value);
+			const redMix = Number(ui.redMix.value);
+
+			// Build deck
+			const deck = [];
+
+			// Blue tiles
+			for (let i = 1; i <= maxBlue; i++) {
+				deck.push(i, i, i, i);
+			}
+
+			// Yellow tiles
+			const yellowTiles = [];
+			for (let i = 1; i <= maxBlue - 1; i++) {
+				yellowTiles.push(i + 0.1);
+			}
+			shuffle(yellowTiles);
+			let yellowTilesDrawn = yellowTiles.slice(0, yellowDraw);
+			shuffle(yellowTilesDrawn);
+			const yellowTilesToMix = yellowTilesDrawn.slice(0, yellowMix);
+			yellowTilesToMix.forEach(t => deck.push(t));
+			yellowTilesDrawn.sort((a, b) => a - b);
+
+			// Red tiles
+			const redTiles = [];
+			for (let i = 1; i <= maxBlue - 1; i++) {
+				redTiles.push(i + 0.5);
+			}
+			shuffle(redTiles);
+			let redTilesDrawn = redTiles.slice(0, redDraw);
+			shuffle(redTilesDrawn);
+			const redTilesToMix = redTilesDrawn.slice(0, redMix);
+			redTilesToMix.forEach(t => deck.push(t));
+			redTilesDrawn.sort((a, b) => a - b);
+
+			// Shuffle deck
+			shuffle(deck);
+
+			// Deal hands
+			const handCount = players === 5 ? 5 : 4;
+			const hands = Array.from({ length: handCount }, () => []);
+
+			deck.forEach((tile, i) => {
+				hands[i % handCount].push(tile);
+			});
+
+			// Assign hands to players
+			playerHands = Array.from({ length: players }, () => []);
+
+			if (players === 2) {
+				hands.sort((a, b) => b.length - a.length);
+				playerHands[0].push(hands[0], hands[3]);
+				playerHands[1].push(hands[1], hands[2]);
+			} else if (players === 3) {
+				playerHands[0].push(hands[0], hands[2]);
+				playerHands[1].push(hands[1]);
+				playerHands[2].push(hands[3]);
+			} else {
+				hands.forEach((hand, i) => playerHands[i].push(hand));
+			}
+
+			// Sort hands
+			playerHands.forEach(ph =>
+				ph.forEach(hand => hand.sort((a, b) => a - b))
+			);
+
+			ui.game.style.display = "block";
+
+			ui.output.innerHTML = "";
+
+			playerHands.forEach((hands, idx) => {
+				const linkDiv = document.createElement("div");
+				const playerText = document.createElement("div");
+				playerText.textContent = `Player ${idx + 1} link:`;
+				linkDiv.appendChild(playerText);
+				const linkInput = document.createElement("input");
+				linkInput.type = "text";
+				linkInput.readOnly = true;
+				linkInput.value = createPlayerLink({
+					h: hands,
+					y: yellowTilesDrawn,
+					r: redTilesDrawn,
+				});
+				linkInput.addEventListener("click", () => {
+					linkInput.select();
+					document.execCommand("copy");
+					ui.toast.classList.remove("visible");
+					setTimeout(() => showToast("Copied!"), 200);
+				});
+				linkDiv.appendChild(linkInput);
+				ui.output.appendChild(linkDiv);
+			});
+		});
+
+		ui.maxBlue.addEventListener("blur", () => {
+			ui.yellowDraw.max = ui.maxBlue.value - 1;
+			ui.redDraw.max = ui.maxBlue.value - 1;
+		});
+
+		ui.yellowDraw.addEventListener("blur", () => {
+			ui.yellowMix.max = ui.yellowDraw.value;
+		});
+
+		ui.redDraw.addEventListener("blur", () => {
+			ui.redMix.max = ui.redDraw.value;
+		});
+
+		ui.notes.addEventListener("input", () => {
+			localStorage.notes = ui.notes.value;
+		});
+
+		ui.clearNotes.addEventListener("click", () => {
+			delete localStorage.notes;
+			ui.notes.value = "";
+		});
+	</script>
+
+</body>
+</html>

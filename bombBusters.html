@@ -74,13 +74,18 @@
 				font-size: 1.5rem;
 				cursor: pointer;
 				background: var(--background-body);
+				user-select: none;
 
 				&:hover {
 					filter: brightness(1.2);
 				}
 
-				&.cut {
+				&[data-state="1"] {
 					background: #243
+				}
+
+				&[data-state="2"] {
+					background: #136
 				}
 
 				.columnId {
@@ -88,7 +93,7 @@
 					position: absolute;
 					top: 0;
 					left: 5px;
-					color: #89f
+					color: #bcf
 				}
 			}
 		}
@@ -151,8 +156,11 @@
 	<section id="playerHandSection" style="display: none;">
 		<h2>Your Hands:</h2>
 		<div id="playerHands"></div>
-		<h3>Other possible yellow and red tiles:</h3>
-		<div id="possibleRedYellow" class="possibleRedYellow"></div>
+		<div id="yellowRedNotes" style="display: none;">
+			<h3 style="margin-bottom: 0;">Possible yellow & red tiles:</h3>
+			<h5 style="margin: 0 0 0.5rem 0; font-size: 0.75rem">(Yours are faded out.)</h5>
+			<div id="possibleRedYellow" class="possibleRedYellow"></div>
+		</div>
 		<div class="flex" style="justify-content: space-between; align-items: end;">
 			<h3>Notes:</h3>
 			<button role="button" id="clearNotes" style="padding: 4px 14px; margin-right: 0">
@@ -243,36 +251,45 @@
 				columnId.className = "columnId";
 				columnId.textContent = String.fromCharCode("A".charCodeAt(0) + idx);
 				tileDiv.appendChild(columnId);
-				tileDiv.addEventListener("click", () => tileDiv.classList.toggle("cut"));
+				tileDiv.addEventListener("click", () =>
+					tileDiv.dataset.state = (parseInt(tileDiv.dataset.state || "0") + 1) % 3);
 				grid.appendChild(tileDiv);
 			});
 			return container;
 		};
 
-		if (location.search) {
-			try {
-				currentPlayerData = decodePlayerLink(location.search);
-				ui.formSection.style.display = "none";
-				ui.playerHandSection.style.display = "block";
-				document.querySelector("hr").remove();
-				const allTiles = [];
-				currentPlayerData.h.forEach((hand, idx) => {
-					const handDiv = createPlayableHandUI(hand, { title: `Hand ${idx + 1}` });
-					ui.playerHands.appendChild(handDiv);
-					allTiles.push(...hand);
-				});
-				ui.notes.value = localStorage.notes || "";
-				ui.backLink.href = location.origin + location.pathname;
-				ui.backLink.style.display = "block";
-				[...currentPlayerData.y, ...currentPlayerData.r].forEach(tile => {
+		const loadGameFromPlayerLink = () => {
+			currentPlayerData = decodePlayerLink(location.search);
+			ui.formSection.style.display = "none";
+			ui.playerHandSection.style.display = "block";
+			document.querySelector("hr").remove();
+			const allTiles = [];
+			currentPlayerData.h.forEach((hand, idx) => {
+				const handDiv = createPlayableHandUI(hand, { title: `Hand ${idx + 1}` });
+				ui.playerHands.appendChild(handDiv);
+				allTiles.push(...hand);
+			});
+			ui.notes.value = localStorage.notes || "";
+			ui.backLink.href = location.origin + location.pathname;
+			ui.backLink.style.display = "block";
+			const yellowRedTiles = [...currentPlayerData.y, ...currentPlayerData.r];
+			if (yellowRedTiles.length > 0) {
+				yellowRedTiles.forEach(tile => {
 					const tileEl = colorizeTile(tile);
 					if (allTiles.includes(tile)) {
-						tileEl.style.opacity = 0.4;
+						tileEl.style.opacity = 0.5;
 					} else {
 						tileEl.style.fontWeight = "bold";
 					}
 					ui.possibleRedYellow.appendChild(tileEl);
 				});
+				ui.yellowRedNotes.style.display = "block";
+			}
+		};
+
+		if (location.search) {
+			try {
+				loadGameFromPlayerLink();
 			} catch {
 				console.error("Failed to decode player link.");
 			}
@@ -390,6 +407,13 @@
 		});
 
 		ui.redDraw.addEventListener("blur", () => {
+			ui.redMix.max = ui.redDraw.value;
+		});
+
+		window.addEventListener('pageshow', () => {
+			ui.yellowDraw.max = ui.maxBlue.value - 1;
+			ui.redDraw.max = ui.maxBlue.value - 1;
+			ui.yellowMix.max = ui.yellowDraw.value;
 			ui.redMix.max = ui.redDraw.value;
 		});
 

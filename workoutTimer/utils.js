@@ -34,11 +34,18 @@ export const debounce = (fn, delay) => {
 };
 
 export const safeParseInt = (str = '', defaultNum) => {
-	let num = parseInt(str.trim());
-	if (isNaN(num)) {
+	const num = parseInt(str.trim(), 10);
+	if (Number.isNaN(num)) {
 		return defaultNum;
 	}
 	return num;
 };
 
-
+export const getPrettyTime = (seconds) => {
+	if (seconds < 60) {
+		return seconds;
+	}
+	const min = Math.floor(seconds / 60);
+	const sec = seconds - min * 60;
+	return `${min}:${sec < 10 ? '0' + sec : sec}`;
+};

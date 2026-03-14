@@ -49,6 +49,7 @@
 		<div class="flex" data-id="settingsTabs">
 			<div role="button" class="tab active" data-tab="saveLoadTab">Save / Load</div>
 			<div role="button" class="tab" data-tab="voiceTab">Voice</div>
+			<div role="button" class="tab" data-tab="helpTab">Help</div>
 		</div>
 		<div class="tab-content active" data-id="saveLoadTab">
 			<section>
@@ -78,6 +79,30 @@
 				<div class="voice"><select data-id="voiceSelect"></select></div>
 			</div>
 		</div>
+		<div class="tab-content" data-id="helpTab">
+			<p>Exercise times can be specified in seconds or in the format <code>min:sec</code></p>
+			<p>
+				You can add loops to your workouts by typing <code>loop, 3</code>. This will loop exercises below it 3 times.
+				If you type <code>end</code> somewhere below a <code>loop</code>, it will only loop exercises above the
+				<code>end</code> and below the closest <code>loop</code>.
+				You can even nest <code>loops</code> inside each other!
+				Any <code>loop</code>s that aren't closed with <code>end</code> will be auto closed at the very end of the exercise list.
+			</p>
+			<p>Example:</p>
+			<code class="code-example"><br>
+				loop, 3<br>
+				exercise1, 1:15<br>
+				exercise2, 20<br>
+				end<br>
+				loop, 2<br>
+				exercise3, 90<br>
+				loop, 5<br>
+				nested_loop_exercise, 1:30<br>
+				end<br>
+				exercise4, 10<br>
+				end
+			</code>
+		</div>
 		<div class="btn-row">
 			<button data-id="closeSettingsDialogBtn">Close</button>
 		</div>
@@ -89,7 +114,14 @@
 			type="video/webm">
 	</video>
 
-	<div class="blackOverlay" data-id="blackOverlay"></div>
+	<div class="blackOverlay" data-id="blackOverlay">
+		<div class="unlock-wrapper" data-id="unlockWrapper">
+			<div class="unlock-track">
+				<div class="unlock-handle" data-id="unlockHandle"></div>
+			</div>
+			<div class="unlock-text">Swipe to unlock</div>
+		</div>
+	</div>
 
 	<script src="main.js" type="module"></script>
 </body>

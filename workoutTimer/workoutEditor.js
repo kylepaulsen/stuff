@@ -1,15 +1,12 @@
 import { ui, safeParseInt, appStorage, debounce } from './utils.js';
 
+const specialExerciseKeywords = ['rest', 'loop', 'end'];
+
 const updateDuration = () => {
-	const text = ui.exercises.innerText.trim();
-	const lines = text.split('\n');
+	const exercises = parseExercises(ui.exercises?.innerText, { unrollLoops: true });
 	let seconds = 0;
-	lines.forEach(l => {
-		const eParts = l.split(',');
-		if (eParts.length > 1) {
-			const last = eParts.pop();
-			seconds += Math.max(safeParseInt(last.trim(), 30), 0);
-		}
+	exercises.forEach(e => {
+		seconds += parseExerciseTime(e);
 	});
 	const min = Math.floor(seconds / 60);
 	let sec = (seconds - min * 60) + '';
@@ -19,24 +16,91 @@ const updateDuration = () => {
 	ui.duration.textContent = `${min}:${sec}`;
 };
 
-export const parseExercises = (str) => {
-	const exercises = [];
-	if (!str) {
-		str = ui.exercises.innerText;
+export const parseExerciseTime = (exercise) => parseTime(exercise.time || exercise.seconds);
+
+const parseTime = (str) => {
+	const parts = ('' + str).split(':');
+	let min = 0;
+	let sec = 0;
+	if (parts.length > 1) {
+		min = safeParseInt(parts[0], 0);
+		sec = safeParseInt(parts[1], 0);
+	} else {
+		sec = safeParseInt(parts[0], 0);
 	}
-	str.trim().split('\n').forEach(e => {
-		const eParts = e.split(',');
-		const last = eParts.pop();
-		const seconds = Math.max(safeParseInt(last.trim(), 30), 0);
-		const name = eParts.join(',');
-		if (name) {
-			exercises.push({
-				name,
-				seconds
-			});
+	return min * 60 + sec;
+};
+
+export const parseExercises = (str, options = {}) => {
+	const MAX_EXERCISES = 9999;
+	const lines = (str || "").trim().split('\n');
+
+	// Root scope is just a loop that runs once
+	const stack = [{ loops: 1, items: [] }];
+
+	const getExerciseCount = (stack) => {
+		let count = 0;
+		for (let i = 0; i < stack.length; i++) {
+			const currentLevel = stack[i];
+			count += currentLevel.items.length * currentLevel.loops;
 		}
-	});
-	return exercises;
+		return count;
+	};
+
+	for (let line of lines) {
+		const parts = line.split(',');
+		let lastPart;
+		if (parts.length > 1) {
+			lastPart = parts.pop()?.trim();
+		}
+		const label = parts.join(',').trim();
+		const labelLower = label.toLowerCase();
+		const value = lastPart;
+
+		if (options.unrollLoops && labelLower === 'loop') {
+			stack.push({ loops: value, items: [] });
+		} else if (options.unrollLoops && labelLower === 'end') {
+			if (stack.length > 1) {
+				const expectedCount = getExerciseCount(stack);
+				if (expectedCount > MAX_EXERCISES) {
+					break;
+				}
+				const currentScope = stack.pop();
+				const parentScope = stack[stack.length - 1];
+
+				for (let x = 0; x < currentScope.loops; x++) {
+					parentScope.items = parentScope.items.concat(currentScope.items);
+				}
+			}
+		} else if (label.length > 0) {
+			// It's a regular exercise
+			const currentScope = stack[stack.length - 1];
+			const newExercise = {
+				name: label,
+				time: value
+			};
+			if (specialExerciseKeywords.includes(labelLower)) {
+				newExercise.type = labelLower;
+			}
+			currentScope.items.push(newExercise);
+		}
+	}
+
+	// Handle "hanging" loops (if user forgot 'End')
+	while (stack.length > 1) {
+		const expectedCount = getExerciseCount(stack);
+		const unclosed = stack.pop();
+		const parentScope = stack[stack.length - 1];
+		if (expectedCount > MAX_EXERCISES) {
+			parentScope.items = parentScope.items.concat(unclosed.items);
+		} else {
+			for (let x = 0; x < unclosed.loops; x++) {
+				parentScope.items = parentScope.items.concat(unclosed.items);
+			}
+		}
+	}
+
+	return stack[0].items;
 };
 
 const checkForNestedElements = () => ([]).find.call(ui.exercises.children, el => el.children.length > 0);
@@ -45,10 +109,15 @@ export const setExercises = (exercises) => {
 	ui.exercises.innerHTML = '';
 	exercises.forEach(e => {
 		const div = document.createElement('div');
-		div.classList.add('exercise');
-		div.textContent = `${e.name}, ${e.seconds}`;
-		if (e.name.toLowerCase() === 'rest') {
-			div.classList.add('rest');
+		if (e.type === 'end') {
+			div.textContent = `${e.name}`;
+		} else {
+			div.textContent = `${e.name}, ${e.time || e.seconds}`;
+		}
+		if (specialExerciseKeywords.includes(e.type)) {
+			div.classList.add(e.type);
+		} else {
+			div.classList.add('exercise');
 		}
 		ui.exercises.appendChild(div);
 	});
@@ -57,9 +126,9 @@ export const setExercises = (exercises) => {
 
 const makeTextRich = () => {
 	for (let n of ui.exercises.children) {
-		const textContent = n.textContent.toLowerCase();
-		if (textContent.includes('rest')) {
-			n.className = 'rest';
+		const exerciseName = (n.textContent || '').toLowerCase().split(',')[0].trim();
+		if (specialExerciseKeywords.includes(exerciseName)) {
+			n.className = exerciseName;
 		} else {
 			n.className = 'exercise';
 		}
@@ -118,6 +187,6 @@ ui.exercises.addEventListener('keyup', debounce(() => {
 
 ui.exercises.addEventListener('blur', () => {
 	if (checkForNestedElements()) {
-		setExercises(parseExercises());
+		setExercises(parseExercises(ui.exercises?.innerText));
 	}
 });

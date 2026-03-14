@@ -1,5 +1,6 @@
 :root {
 	--rest-color: #999;
+	--loop-color: #aaf;
 }
 
 * {
@@ -130,7 +131,7 @@ dialog {
 	padding: 34px 10px 10px 10px;
 
 	&::after {
-		content: "Exercise, Seconds";
+		content: "Exercise, Time or Seconds";
 		position: absolute;
 		top: 4px;
 		left: 10px;
@@ -138,16 +139,26 @@ dialog {
 		width: calc(100% - 20px);
 		border-bottom: 1px solid #999;
 	}
-}
 
-.exercise {
-	color: var(--form-text);
-	font-weight: bold;
-}
+	& .exercise {
+		color: var(--form-text);
+		font-weight: bold;
+	}
 
-.rest {
-	color: var(--rest-color);
-	font-weight: normal;
+	& .rest {
+		color: var(--rest-color);
+		font-weight: normal;
+	}
+
+	& .loop {
+		color: var(--loop-color);
+		font-weight: normal;
+	}
+
+	& .end {
+		color: var(--loop-color);
+		font-weight: normal;
+	}
 }
 
 .tab {
@@ -182,6 +193,12 @@ dialog {
 
 .voice select {
 	width: 100%;
+}
+
+.code-example {
+	display: inline-block;
+	background: transparent;
+	transform: translateY(-30px);
 }
 
 .warning {
@@ -261,6 +278,61 @@ dialog {
 	bottom: 0;
 	background: #000;
 	z-index: 9999;
+	user-select: none;
+	touch-action: none;
+}
+
+.unlock-wrapper {
+	position: absolute;
+	top: 60%;
+	left: 50%;
+	transform: translate(-50%, -50%);
+	display: flex;
+	flex-direction: column;
+	align-items: center;
+	gap: 20px;
+	opacity: 0;
+	transition: opacity 0.3s ease;
+	pointer-events: none;
+}
+
+.unlock-wrapper.visible {
+	opacity: 1;
+	pointer-events: auto;
+}
+
+.unlock-track {
+	width: 60px;
+	height: 200px;
+	background: rgba(255, 255, 255, 0.1);
+	border: 2px solid rgba(255, 255, 255, 0.2);
+	border-radius: 30px;
+	position: relative;
+	overflow: hidden;
+	display: flex;
+	align-items: end;
+	justify-content: center;
+	padding: 5px 0;
+}
+
+.unlock-handle {
+	width: 50px;
+	height: 50px;
+	background: #fff;
+	border-radius: 50%;
+	box-shadow: 0 0 15px rgba(255, 255, 255, 0.5);
+	cursor: grab;
+	transition: transform 0.3s ease;
+}
+
+.unlock-handle:active {
+	cursor: grabbing;
+}
+
+.unlock-text {
+	color: rgba(255, 255, 255, 0.6);
+	font-size: 14px;
+	font-weight: 300;
 }
 
 #screenLockVid {

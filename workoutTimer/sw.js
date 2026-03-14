@@ -1,9 +1,10 @@
 const appName = "kyles-workout-timer";
 // change app version to trigger an update and recache
-const appVersion = '1.0.3';
+const appVersion = '1.1.0';
 const cacheName = `${appName}_v${appVersion}`;
 
 const filesToCache = [
+	"blackOverlay.js",
 	"index.html",
 	"main.js",
 	"manifest.webmanifest",

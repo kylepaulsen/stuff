@@ -1,6 +1,7 @@
-import { ui, appStorage } from './utils.js';
+import { ui, appStorage, getPrettyTime } from './utils.js';
 import { primeSpeechSynthesis, say } from './textToSpeech.js';
-import { parseExercises } from './workoutEditor.js';
+import { parseExercises, parseExerciseTime } from './workoutEditor.js';
+import "./blackOverlay.js";
 import "./settings.js";
 
 let wakeLock;
@@ -11,6 +12,7 @@ let timerLength;
 let pauseStartTime;
 let pauseTime;
 let lastSecondsLeft;
+let hadRest = false;
 const updateTime = () => {
 	if (pauseStartTime) {
 		return;
@@ -25,13 +27,14 @@ const updateTime = () => {
 		nextExercise();
 		return;
 	}
-	ui.currentExerciseTime.textContent = secondsLeft;
+	ui.currentExerciseTime.textContent = getPrettyTime(secondsLeft);
 	const currentExercise = exercises[currentExerciseIdx];
 	const nextUpExercise = exercises[currentExerciseIdx + 1];
 
 	const isExercise = currentExercise.name.toLowerCase() !== 'rest';
 	const nextIsRest = nextUpExercise && nextUpExercise.name.toLowerCase() === 'rest';
-	if (secondsLeft === Math.floor(currentExercise.seconds / 2) && isExercise && currentExercise.seconds > 7) {
+	const exerciseSeconds = parseExerciseTime(currentExercise);
+	if (secondsLeft === Math.floor(exerciseSeconds / 2) && isExercise && exerciseSeconds > 7) {
 		say('Halfway done!');
 	} else if (secondsLeft === 4) {
 		primeSpeechSynthesis();
@@ -45,13 +48,15 @@ const updateTime = () => {
 				say('Workout complete!');
 				stopWorkout();
 			} else if (nextIsRest) {
+				hadRest = true;
 				let toSay = 'Now rest!';
 				if (exercises[currentExerciseIdx + 2]) {
 					toSay += ` Up next, ${exercises[currentExerciseIdx + 2].name}`;
 				}
 				say(toSay);
 			} else {
-				say('Go!');
+				say(hadRest ? 'Go!' : `${nextUpExercise.name}, go!`);
+				hadRest = false;
 			}
 		}
 	}
@@ -84,7 +89,7 @@ const nextExercise = () => {
 	if (currentExercise) {
 		timerTimestamp = Date.now();
 		pauseTime = 0;
-		timerLength = currentExercise.seconds;
+		timerLength = parseExerciseTime(currentExercise);
 		const nameDiv = document.createElement('div');
 		nameDiv.textContent = currentExercise.name;
 		ui.currentExerciseName.innerHTML = '';
@@ -94,7 +99,7 @@ const nextExercise = () => {
 			nextUpDiv.textContent = nextUp;
 			ui.currentExerciseName.appendChild(nextUpDiv);
 		}
-		ui.currentExerciseTime.textContent = currentExercise.seconds;
+		ui.currentExerciseTime.textContent = timerLength;
 	}
 };
 
@@ -121,7 +126,7 @@ const startWorkout = async () => {
 	document.body.scrollTop = 0;
 	ui.workoutDialog.showModal();
 
-	exercises = parseExercises();
+	exercises = parseExercises(ui.exercises?.innerText, { unrollLoops: true });
 
 	wakeLock = await requsetWakeLock();
 	exercises.unshift({name: 'Get Ready', seconds: 6});
@@ -195,18 +200,6 @@ ui.pauseWorkoutBtn.addEventListener('click', () => {
 	} else {
 		unpauseWorkout();
 	}
-});
-
-ui.screenOffBtn.addEventListener('click', () => {
-	ui.blackOverlay.style.display = 'block';
-	ui.workoutDialog.close();
-	ui.blackOverlay.requestFullscreen();
-});
-
-ui.blackOverlay.addEventListener('click', () => {
-	document.exitFullscreen();
-	ui.blackOverlay.style.display = 'none';
-	ui.workoutDialog.showModal();
 });
 
 const workoutDialogObserver = new MutationObserver(() => {

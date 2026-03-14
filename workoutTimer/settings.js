@@ -68,7 +68,7 @@ const saveWorkouts = () => {
 };
 
 const saveWorkout = (name) => {
-	const exercises = parseExercises();
+	const exercises = parseExercises(ui.exercises?.innerText);
 	if (exercises.length && name) {
 		allSavedWorkouts.unshift({
 			name,

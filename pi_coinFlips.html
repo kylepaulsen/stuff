@@ -1,0 +1,233 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+	<meta charset="UTF-8">
+	<meta name="viewport" content="width=device-width, initial-scale=1.0">
+	<title>Estimating π via Coin Flips</title>
+	<link rel="stylesheet" href="water.dark.min.css">
+	<style>
+		h1 {
+			border-bottom: 2px solid #eee;
+			padding-bottom: 10px;
+			margin: 0;
+		}
+		canvas {
+			box-sizing: border-box;
+			width: 100%;
+			height: 300px;
+			border-radius: 4px;
+		}
+		input {
+			width: 100%;
+			max-width: 100px;
+			min-width: 60px;
+		}
+		.container {
+			background: var(--background-alt);
+			padding: 30px;
+			border-radius: 12px;
+			box-shadow: 8px 10px 8px rgba(0,0,0,0.3);
+		}
+		.card {
+			background: var(--background-body);
+			padding: 15px;
+			border-radius: 8px;
+			box-shadow: 4px 6px 6px rgba(0,0,0,0.15);
+		}
+		.controls {
+			display: flex;
+			justify-content: space-between;
+			flex-wrap: wrap;
+			align-items: center;
+			margin: 20px 0;
+			& > div {
+				align-items: center;
+				display: flex;
+				gap: 10px;
+			}
+		}
+		.figure-text {
+			font-style: italic;
+			text-align: center;
+			margin: 4px 0 16px 0;
+		}
+		.stats {
+			display: grid;
+			grid-template-columns: 1fr 1fr;
+			gap: 20px;
+			margin-top: 20px;
+		}
+		.stat-card {
+			border-left: 4px solid #3498db;
+		}
+		.pi-estimate {
+			font-size: 1.2em;
+			font-weight: bold;
+			color: #2ecc71;
+		}
+	</style>
+</head>
+<body>
+
+<section class="container">
+	<h1>The Coin Flip π Estimator</h1>
+
+	<p>Did you know you can estimate <strong>π</strong> just by flipping a fair coin? This experiment follows a simple rule:</p>
+	<ol>
+		<li>Flip a coin until <strong>Heads</strong> strictly exceeds <strong>Tails</strong>.</li>
+		<li>Record the ratio of <code>Heads / Total Flips</code> at that exact moment.</li>
+		<li>Repeat this thousands of times and take the average ratio.</li>
+	</ol>
+	<p>Remarkably, this average converges to <code>π / 4</code>.</p>
+
+	<div class="card controls">
+		<div>
+			<label for="expCount">Num. Experiments:</label>
+			<input type="number" data-id="expCount" value="50000" step="1000" min="0">
+		</div>
+		<button data-id="runButton">Run Simulation</button>
+	</div>
+
+	<canvas class="card" data-id="walkCanvas"></canvas>
+	<p class="figure-text">
+		Visualization of the longest experiment's path with <span data-id="longestFlipsNum">-</span> flips.<br>The goal is to cross the "surface" (Heads > Tails).
+	</p>
+
+	<div class="stats">
+		<div class="card stat-card">
+			<strong>Average Ratio:</strong><br>
+			<span data-id="avgRatio">-</span>
+		</div>
+		<div class="card stat-card">
+			<div style="display: flex; justify-content: space-between; flex-wrap: wrap;">
+				<strong>Estimated π:</strong>
+				<div style="font-size: 0.8em; font-style: italic;">(4 * Average Ratio)</div>
+			</div>
+			<span data-id="piEstimate" class="pi-estimate">-</span>
+		</div>
+	</div>
+</section>
+
+<script>
+const ui = {};
+document.querySelectorAll('[data-id]').forEach(el => {
+	ui[el.dataset.id] = el;
+});
+
+const runSimulation = () => {
+	const numExperiments = Math.max(parseInt(ui.expCount.value), 1);
+	const maxFlips = 2000; // Limit for visual and safety
+	let ratioTotal = 0;
+	let longestPath = [];
+
+	console.time("runSimulation");
+	for (let x = 0; x < numExperiments; x++) {
+		let numFlips = 0;
+		let numHeads = 0;
+		let elevation = 0;
+		const currentPath = [0];
+
+		// While Heads <= Tails
+		while (elevation <= 0 && numFlips < maxFlips) {
+			numFlips++;
+			if (Math.random() < 0.5) {
+				numHeads++;
+				elevation++;
+				currentPath.push(elevation);
+			} else {
+				elevation--;
+				currentPath.push(elevation);
+			}
+		}
+
+		// Add to ratio total
+		if (numFlips === maxFlips) {
+			// maxFlips reached, ratio will be very close to 0.5.
+			ratioTotal += 0.5;
+		} else {
+			ratioTotal += numHeads / numFlips;
+
+			// Save the longest experiment path for the canvas
+			if (currentPath.length > longestPath.length) {
+				longestPath = currentPath;
+			}
+		}
+	}
+	console.timeEnd("runSimulation");
+
+	const averageRatio = ratioTotal / numExperiments;
+	const piEst = 4 * averageRatio;
+
+	ui.avgRatio.innerText = averageRatio.toFixed(6);
+	ui.piEstimate.innerText = piEst.toFixed(6);
+	ui.longestFlipsNum.innerText = longestPath.length;
+
+	drawPath(longestPath);
+};
+
+const drawPath = (path) => {
+	const canvas = ui.walkCanvas;
+	const ctx = canvas.getContext('2d');
+
+	// Set internal resolution
+	canvas.width = canvas.offsetWidth;
+	canvas.height = canvas.offsetHeight;
+
+	const padding = 10;
+	const width = canvas.width - padding * 2;
+	const height = canvas.height - padding * 2;
+	const waterLineYPercent = 0.1;
+	const waterLineY = canvas.height * waterLineYPercent;
+
+	ctx.clearRect(0, 0, canvas.width, canvas.height);
+
+	// Draw "Water Line" (X-axis)
+	ctx.beginPath();
+	ctx.strokeStyle = '#bdc3c7';
+	ctx.lineWidth = 2;
+	ctx.moveTo(padding, waterLineY);
+	ctx.lineTo(canvas.width - padding, waterLineY);
+	ctx.stroke();
+
+	// Setup scaling
+	const stepX = width / (path.length - 1 || 1);
+	const maxVal = Math.max(...path.map(Math.abs), 2); // Ensure some scale
+	const stepY = height * (1 - waterLineYPercent) / maxVal;
+
+	// Draw the Walk
+	ctx.beginPath();
+	ctx.lineWidth = 1;
+	ctx.strokeStyle = '#3498db';
+	ctx.lineJoin = 'round';
+
+	ctx.moveTo(padding, waterLineY);
+
+	let lastX = 0;
+	path.forEach((val, index) => {
+		const x = Math.round(padding + (index * stepX));
+		if (x === lastX) {
+			return;
+		}
+		lastX = x;
+		const y = Math.max(waterLineY - (val * stepY), padding);
+		ctx.lineTo(x, y);
+	});
+
+	ctx.stroke();
+
+	// Highlight the end point
+	const lastY = Math.max(waterLineY - (path[path.length - 1] * stepY), padding);
+	ctx.beginPath();
+	ctx.fillStyle = path[path.length-1] > 0 ? '#2ecc71' : '#e74c3c';
+	ctx.arc(padding + (path.length - 1) * stepX, lastY, 3, 0, Math.PI * 2);
+	ctx.fill();
+};
+
+ui.runButton.addEventListener('click', runSimulation);
+
+// Run once on load
+runSimulation();
+</script>
+
+</body>
+</html>
